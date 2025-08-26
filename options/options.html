@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+
+<body>
+  <div>options</div>
+  <div class="delete-old-items">
+    <label for="deleteOldItems">Delete old items after:</label>
+    <input type="number" id="deleteOldItems" min="1">
+    <label for="deleteOldItems">days</label>
+  </div>
+  <div class="fetch-feeds">
+    <label for="fetchFeeds">Check for new items every:</label>
+    <input type="number" id="fetchFeeds" min="10">
+    <label for="fetchFeeds">minutes</label>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+
+</html>
