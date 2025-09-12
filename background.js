@@ -11,21 +11,37 @@ async function createOffscreenDocument() {
 
 chrome.runtime.onInstalled.addListener(async () => {
   await createOffscreenDocument();
-  await fetchFeeds();
+  if (navigator.onLine) {
+    await fetchFeeds()
+  }
   await countUnreadItems();
   await deleteOldItems();
 });
 
-chrome.storage.local.get({ fetchFeedsIntervalMinutes: 30 }).then(({ fetchFeedsIntervalMinutes }) => {
+chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 }).then(({ fetchFeedsIntervalMinutes }) => {
   chrome.alarms.create('fetch-feeds', { periodInMinutes: Number(fetchFeedsIntervalMinutes) });
 })
 
-// chrome.alarms.create('fetch-feeds', { periodInMinutes: 30 });
 chrome.alarms.create('delete-old-items', { periodInMinutes: 24 * 60 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'fetch-feeds') {
-    fetchFeeds();
+    if (navigator.onLine) {
+      fetchFeeds();
+    } else {
+      chrome.storage.local.set({ pendingFetch: true });
+      chrome.alarms.create('check-online', { periodInMinutes: 3 });
+    }
+  } else if (alarm.name === 'check-online') {
+    if (navigator.onLine) {
+      chrome.storage.local.get('pendingFetch', (result) => {
+        if (result.pendingFetch) {
+          fetchFeeds();
+          chrome.storage.local.set({ pendingFetch: false });
+        }
+      });
+      chrome.alarms.clear('check-online');
+    }
   } else if (alarm.name === 'delete-old-items') {
     deleteOldItems();
   }
@@ -37,7 +53,6 @@ chrome.runtime.onMessage.addListener((request) => {
   }
 });
 
-// Open the database
 const openDB = async () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("feedsRss", 1);
@@ -257,7 +272,6 @@ async function deleteFeed(id) {
 }
 async function fetchFeeds() {
   const { feeds } = await chrome.storage.local.get({ feeds: [] });
-
   for (const feed of feeds) {
     try {
       const response = await fetch(feed.url)
@@ -324,7 +338,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: err.message });
       }
     } else if (message.type === 'findRSSFeeds') {
-      try {        
+      try {
         const data = await findRssFeed(message.url);
         sendResponse({ success: true, data });
       } catch (err) {
@@ -372,18 +386,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   })();
   return true;
 })
-
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   if (message.type === "checkForRssFeed") {
-//     console.log('inBackgraund');
-    
-//     // try {
-//     //   const data = checkForRssFeed(message.data);
-//     //   sendResponse({ type: "checkForRssFeed", data });
-//     // } catch (error) {
-//     //   sendResponse({ error: error.message });
-//     // }
-//   }
-// });
 
 

@@ -175,6 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 document.querySelector('.refresh').addEventListener('click', async () => {
+  if(!navigator.onLine) {
+    showToast('You are offline', 'error');
+    return;
+  }
   const refreshButton = document.querySelector('.refresh');
   refreshButton.classList.add('loading');
   const { success, error } = await chrome.runtime.sendMessage({ type: 'fetchFeeds' });

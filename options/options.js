@@ -5,7 +5,7 @@ deleteOldItemsInput.addEventListener('change', async () => {
 })
 
 const fetchFeedsInput = document.querySelector('#fetchFeeds');
-fetchFeedsInput.value = (await chrome.storage.local.get({ fetchFeedsIntervalMinutes: 30 })).fetchFeedsIntervalMinutes;
+fetchFeedsInput.value = (await chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 })).fetchFeedsIntervalMinutes;
 fetchFeedsInput.addEventListener('change', async () => {
   await chrome.storage.local.set({ fetchFeedsIntervalMinutes: fetchFeedsInput.value });
 })
