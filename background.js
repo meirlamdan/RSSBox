@@ -80,8 +80,8 @@ const insertData = async (items, feedId) => {
     const store = tx.objectStore("items");
 
     for (const item of items) {
-      const { guid, title, link, description, content, pubDate } = item;
-      const newItem = { id: guid, feedId, title, link, description, content, pubDate, dateTs: new Date(pubDate).getTime(), createdAt: Date.now(), isRead: 0 };
+      const { guid, title, link, description, content, media, pubDate } = item;
+      const newItem = { id: guid, feedId, title, link, description, content, media, pubDate, dateTs: new Date(pubDate).getTime(), createdAt: Date.now(), isRead: 0 };
       store.put(newItem);
     }
     tx.oncomplete = () => resolve(true);

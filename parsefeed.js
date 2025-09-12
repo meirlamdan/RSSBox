@@ -9,67 +9,55 @@ export function parseFeed(xmlText) {
   const isRSS = xml.querySelector("rss") !== null;
   const isAtom = xml.querySelector("feed") !== null;
 
-  function extractMedia(el) {
-    const media = el.querySelector("media\\:content");
-    if (media && media.getAttribute("url")) return media.getAttribute("url");
-
-    const enclosure = el.querySelector("enclosure");
-    if (enclosure && enclosure.getAttribute("url")) return enclosure.getAttribute("url");
-
-    const html = (
-      el.querySelector("description") ||
-      el.querySelector("content\\:encoded") ||
-      el.querySelector("summary") ||
-      el.querySelector("content")
-    )?.textContent;
-
-    if (html) {
-      const match = html.match(/<img[^>]+src="([^">]+)"/i);
-      if (match) return match[1];
+  const text = (el, tag) => {
+    const node = el.getElementsByTagName(tag)?.[0];
+    if (node) {
+      return node.textContent?.trim();
     }
+    return null;
+  }
 
+
+  function extractMedia(el) {
+    const media = el.getElementsByTagName("media:content")?.[0] || el.getElementsByTagName("media:thumbnail")?.[0];
+    if (media) {
+      return {
+        url: media.getAttribute("url"),
+        type: media.getAttribute("type"),
+        width: media.getAttribute("width"),
+        height: media.getAttribute("height"),
+        media: media.getAttribute("media")
+      };
+    }
     return null;
   }
 
   if (isRSS) {
     const items = Array.from(xml.querySelectorAll("item"));
     return items.map(item => ({
-      title: item.querySelector("title")?.textContent?.trim() || "",
-      link: item.querySelector("link")?.textContent?.trim() || "",
-      pubDate:
-        item.querySelector("pubDate")?.textContent?.trim() ||
-        item.getElementsByTagName("dc:date")[0]?.textContent?.trim() ||
-        "",
-      guid: item.querySelector("guid")?.textContent?.trim() || "",
-      description:
-        item.querySelector("description")?.textContent?.trim() || "",
-      content: item.getElementsByTagName("content:encoded")[0]?.textContent?.trim() || "",
-      mediaUrl: extractMedia(item)
+      title: text(item, "title"),
+      link: text(item, "link"),
+      pubDate: text(item, "pubDate") || text(item, "dc:date"),
+      guid: text(item, "guid"),
+      description: text(item, "description"),
+      content: text(item, "content:encoded"),
+      media: extractMedia(item)
     }));
-    console.log(items);
-
   }
 
   if (isAtom) {
     const entries = Array.from(xml.querySelectorAll("entry"));
     return entries.map(entry => ({
-      title: entry.querySelector("title")?.textContent?.trim() || "",
+      title: text(entry, "title"),
       link:
         entry.querySelector("link[rel='alternate']")?.getAttribute("href") ||
         entry.querySelector("link")?.getAttribute("href") ||
         "",
-      pubDate:
-        entry.querySelector("updated")?.textContent?.trim() ||
-        entry.querySelector("published")?.textContent?.trim() ||
-        "",
-      guid: entry.querySelector("id")?.textContent?.trim() || "",
-      description:
-        entry.querySelector("summary")?.textContent?.trim() ||
-        entry.getElementsByTagName("media:description")[0]?.textContent?.trim() || "",
-      // entry.querySelector("content")?.textContent?.trim() ||
-      // "",
-      content: entry.querySelector("content")?.textContent?.trim() || "",
-      mediaUrl: extractMedia(entry)
+      pubDate: text(entry, "published") || text(entry, "updated"),
+      guid: text(entry, "id"),
+      description: text(entry, "summary") || text(entry, "media:description"),
+      content: text(entry, "content"),
+      media: extractMedia(entry)
     }));
   }
 

@@ -195,10 +195,16 @@ body {
   .item {
     background: white;
     border-radius: 8px;
-    padding: 16px;
+    padding: 20px;
     margin-bottom: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     transition: box-shadow 0.2s ease;
+    word-break: break-all;
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
 
     &:hover {
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
@@ -242,10 +248,10 @@ body {
     }
 
     .description,
-    content {
+    .content {
       font-size: 14px;
       color: #555;
-      margin: 8px 0 0;
+      margin-top: 1rem;
       white-space: pre-wrap;
     }
 
@@ -254,6 +260,16 @@ body {
 
       &:hover {
         background: #e6f0ff;
+      }
+    }
+
+    .media {
+      margin-block: 12px;
+
+      img,
+      video {
+        max-width: 100%;
+        border-radius: 4px;
       }
     }
 
