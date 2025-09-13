@@ -7,6 +7,7 @@
 }
 
 body {
+  font-size: 14px;
   font-family: Arial, sans-serif;
   margin: 0;
   background: #f8f9fa;
@@ -48,7 +49,7 @@ body {
   .feed-title {
     margin: 0;
     padding: 16px 20px;
-    font-size: 18px;
+    font-size: 1.3em;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -149,8 +150,6 @@ body {
     .feed {
       flex: 1;
       min-width: 0;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
       padding: 12px 16px;
 
       .unread {
@@ -167,15 +166,14 @@ body {
           display: inline-block;
           margin-bottom: -2px;
         }
-
-        /* display: flex;
-        gap: 4px; */
       }
 
       .url {
         font-size: 11px;
         color: #777;
         margin-top: 5px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
     }
   }
@@ -199,7 +197,11 @@ body {
     margin-bottom: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     transition: box-shadow 0.2s ease;
-    word-break: break-all;
+
+    a {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
 
     img {
       max-width: 100%;
@@ -237,7 +239,7 @@ body {
     }
 
     .item-title {
-      font-size: 16px;
+      font-size: 1.1rem;
       font-weight: bold;
       color: #007bff;
       text-decoration: none;
@@ -247,12 +249,76 @@ body {
       }
     }
 
-    .description,
-    .content {
-      font-size: 14px;
+    .description {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .content,
+    .description {
       color: #555;
-      margin-top: 1rem;
-      white-space: pre-wrap;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      white-space: pre-line;
+
+      * {
+        white-space: normal;
+      }
+
+      p,
+      div,
+      article,
+      section {
+        margin: 0 0 1.2em;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 1.6em 0 0.8em;
+        line-height: 1.3;
+        font-weight: 600;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      h3 {
+        font-size: 1.25rem;
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        margin: 1.5em auto;
+        border-radius: 8px;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      a {
+        color: #0066cc;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      blockquote {
+        margin: 1.5em 0;
+        padding: 1em 1.5em;
+        background: #f7f7f7;
+        border-left: 4px solid #0077cc;
+        border-radius: 6px;
+        font-style: italic;
+        color: #444;
+      }
     }
 
     &.unread {

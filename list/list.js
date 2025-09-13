@@ -110,8 +110,8 @@ async function displayItems(feedId, itemId) {
         </div>
         <a class="item-title" href="${item.link}" target="_blank">${item.title}</a>
         ${item.media ? html`<div class="media">${renderMedia(item.media)}</div>` : ''}
-        <div class="description">${item.description}</div>
-        <div class="content">${item.content}</div>
+        <div class="description">${item.description || ''}</div>
+        <div class="content">${item.content || ''}</div>
       </div>
     `)}
     </div>`;
