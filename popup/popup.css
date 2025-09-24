@@ -30,14 +30,13 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
     padding: 10px 12px;
     border-bottom: 1px solid #f1f1f1;
     font-size: 13px;
 
     .title {
       flex: 1;
-      font-size: 14px;
       word-break: break-all;
     }
 
@@ -45,7 +44,6 @@ body {
       padding: 5px 8px;
       border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 13px;
       margin-bottom: 5px;
       width: 100%;
     }

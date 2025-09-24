@@ -1,4 +1,4 @@
-import { findRssFeed } from './find-feed.js';
+import { findRssFeed } from './find-feed/index.js';
 async function createOffscreenDocument() {
   if (!(await chrome.offscreen.hasDocument())) {
     await chrome.offscreen.createDocument({
