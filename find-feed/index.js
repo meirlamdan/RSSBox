@@ -26,8 +26,8 @@ export async function findRssFeed(url) {
       });
       if (links.data) {
         links.data.forEach(link => {
-          if (!link.url.startsWith(url)) {
-            link.url = url + link.url
+          if (!link.url.startsWith(domain)) {
+            link.url = domain + link.url
           }
           feeds.push(link);
         });
@@ -62,8 +62,8 @@ export async function findRssFeed(url) {
 
       if (links.data) {
         links.data.forEach(link => {
-          if (!link.url.startsWith(url)) {
-            link.url = url + link.url
+          if (!link.url.startsWith(domain)) {
+            link.url = domain + link.url
           }
           feeds.push(link);
         });
