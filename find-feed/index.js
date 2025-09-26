@@ -69,6 +69,9 @@ export async function findRssFeed(url) {
         });
         return uniqueFeeds(feeds);
       }
+      if (links.error) {
+        console.error(links.error);
+      }
     }
 
     // check common paths
