@@ -6,17 +6,23 @@ const data = reactive({
   feedId: null,
   groupUnreadItemsByFeedId: {},
   openMenuFeedId: null,
-  feeds: []
+  feeds: [],
+  feed: null,
+  items: []
 })
 
 const domain = (url) => new URL(url).hostname;
 
-async function displayAllFeeds() {
-  const { data: groupUnreadItemsByFeedId } = await chrome.runtime.sendMessage({ type: 'getUnreadItemsCountByFeeds' });
-  data.groupUnreadItemsByFeedId = groupUnreadItemsByFeedId;
-  const t = html`<div class="feeds">
+html`<div class="feed-title">
+  ${() => data.feed && html`
+    <img src="https://www.google.com/s2/favicons?domain=${domain(data.feed.url)}" height="16">
+    <span>${data.feed.alt || data.feed.title}</span>`}
+   </div>`(document.querySelector('.feed-wrapper'));
+
+
+html`<div class="feeds">
     ${() => data.feeds.map(feed =>
-    html`<div class="${() => feed.id === data.feedId ? 'feed-item active' : 'feed-item'}" data-id="${feed.id}">
+  html`<div class="${() => feed.id === data.feedId ? 'feed-item active' : 'feed-item'}" data-id="${feed.id}">
       <div class="feed"  @click="${() => displayItems(feed.id)}">
         <div class="unread">${() => data.groupUnreadItemsByFeedId[feed.id] ? data.groupUnreadItemsByFeedId[feed.id] : ''}</div>
       <div class="title">
@@ -32,134 +38,13 @@ async function displayAllFeeds() {
         <button @click="${() => deleteFeed(feed.id)}">❌ Delete Feed</button>
       </div>
     </div>`)}
-  </div>`;
-  const feedsContainer = document.querySelector('.feeds-wrapper');
-  t(feedsContainer);
+  </div>`(document.querySelector('.feeds-wrapper'));
 
-  document.addEventListener('click', (e) => {
-    if (!e.target.classList.contains('feed-menu-btn') && data.openMenuFeedId) {
-      data.openMenuFeedId = null;
-    }
-  })
-}
-
-async function displayItems(feedId, itemId) {
-  const container = document.querySelector('.items');
-  const feedContainer = document.querySelector('.feed-wrapper');
-  const feed = data.feeds.find(f => f.id === feedId);
-  container.innerHTML = '';
-  feedContainer.innerHTML = '';
-  data.feedId = feedId;
-  let items;
-  if (itemId) {
-    const { data: item } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { id: itemId } });
-    items = [item];
-    chrome.storage.local.set({ selectedPostId: null });
-  } else {
-    let { data } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { feedId } });
-    items = data;
-    items.sort((a, b) => b.dateTs - a.dateTs);
-    const t = html`<div class="feed-title">
-    <img src="https://www.google.com/s2/favicons?domain=${domain(feed.url)}" height="16">
-    <span>${feed.alt || feed.title}</span>
-    </div>`;
-    t(feedContainer);
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('feed-menu-btn') && data.openMenuFeedId) {
+    data.openMenuFeedId = null;
   }
-
-  function renderMedia(media) {
-    if (media.url.includes('youtube.com') || media.url.includes('youtu.be')) {
-      const iframeVideoId = new URL(media.url).searchParams.get('v') || new URL(media.url).pathname.split('/').pop();
-
-      return html`<iframe width="${media.width}" height="${media.height}" src="${`https://www.youtube.com/embed/${iframeVideoId}`}"
-      title="YouTube video player" frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen>
-          </iframe >`
-    }
-
-    if (!media.type || media.type?.startsWith("image/")) {
-      return html`<img src="${media.url}" width="${media.width}" height="${media.height}" /> `;
-    }
-
-    if (media.type?.startsWith("video/")) {
-      return html`<video controls width = "${media.width}" height = "${media.height}">
-        <source src="${media.url}" type="${media.type}" />
-      </video>`;
-    }
-
-    if (media.type?.startsWith("audio/")) {
-      return html`<audio controls >
-        <source src="${media.url}" type="${media.type}" />
-      </audio > `;
-    }
-
-    return null;
-  }
-
-
-  const t = html`<div>
-        ${items.map(item =>
-    html`<div class="item ${item.isRead === 0 ? 'unread' : ''}" data-id="${item.id}" data-read="${item.isRead}">
-        <div class="item-details">
-         <div class="date">${formatDate(item.dateTs)}</div>
-         <div class="actions">
-          <div class="delete" @click="${() => deleteItem(item.id)}">
-           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE --><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16m-10 4v6m4-6v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
-          </div>
-         </div>
-        </div>
-        <a class="item-title" href="${item.link}" target="_blank">${item.title}</a>
-        ${item.media ? html`<div class="media">${renderMedia(item.media)}</div>` : ''}
-        <div class="description">${item.description || ''}</div>
-        <div class="content">${item.content || ''}</div>
-      </div>
-    `)}
-    </div>`;
-  t(container);
-
-  let batch = [];
-  let timeout;
-  function markAsReadBatch(itemId) {
-    if (!batch.includes(itemId)) {
-      batch.push(itemId);
-    }
-    clearTimeout(timeout);
-    timeout = setTimeout(sendBatch, 500);
-  }
-
-  function sendBatch() {
-    chrome.runtime.sendMessage({ type: 'markItemsAsRead', ids: batch });
-    if (data.groupUnreadItemsByFeedId[data.feedId]) {
-      data.groupUnreadItemsByFeedId[data.feedId] -= batch.length;
-    }
-    batch = [];
-  }
-  const observer = new IntersectionObserver((entries, obs) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const itemId = entry.target.dataset.id;
-        markAsReadBatch(itemId);
-        obs.unobserve(entry.target);
-      }
-    });
-  }, {
-    root: null,
-    threshold: 0
-  });
-
-
-  document.querySelectorAll('.item').forEach(item => {
-    if (item.dataset.read === '0') {
-      observer.observe(item);
-    }
-  });
-}
-
-function deleteItem(id) {
-  const item = document.querySelector(`.item[data-id="${id}"]`);
-  item.remove();
-  chrome.runtime.sendMessage({ type: 'deleteItems', ids: [id] });
-}
+})
 
 async function deleteFeed(id) {
   if (!confirm('Are you sure you want to delete this feed?')) return;
@@ -194,10 +79,117 @@ async function editFeed(feed) {
   }
 }
 
+function renderMedia(media) {
+  if (media.url.includes('youtube.com') || media.url.includes('youtu.be')) {
+    const iframeVideoId = new URL(media.url).searchParams.get('v') || new URL(media.url).pathname.split('/').pop();
+
+    return html`<iframe width="${media.width}" height="${media.height}" src="${`https://www.youtube.com/embed/${iframeVideoId}`}"
+      title="YouTube video player" frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen>
+          </iframe >`
+  }
+
+  if (!media.type || media.type?.startsWith("image/")) {
+    return html`<img src="${media.url}" width="${media.width}" height="${media.height}" /> `;
+  }
+
+  if (media.type?.startsWith("video/")) {
+    return html`<video controls width = "${media.width}" height = "${media.height}">
+        <source src="${media.url}" type="${media.type}" />
+      </video>`;
+  }
+
+  if (media.type?.startsWith("audio/")) {
+    return html`<audio controls >
+        <source src="${media.url}" type="${media.type}" />
+      </audio > `;
+  }
+
+  return null;
+}
+
+html`<div>
+        ${() => data.items.map(item =>
+  html`<div class="item ${item.isRead === 0 ? 'unread' : ''}" data-id="${item.id}" data-read="${item.isRead}">
+        <div class="item-details">
+         <div class="date">${formatDate(item.dateTs)}</div>
+         <div class="actions">
+          <div class="delete" @click="${() => deleteItem(item.id)}">
+           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE --><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16m-10 4v6m4-6v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
+          </div>
+         </div>
+        </div>
+        <a class="item-title" href="${item.link}" target="_blank">${item.title}</a>
+        ${item.media ? html`<div class="media">${renderMedia(item.media)}</div>` : ''}
+        <div class="description">${item.description || ''}</div>
+        <div class="content">${item.content || ''}</div>
+      </div>
+    `)}
+    </div>`(document.querySelector('.items'));
+
+function deleteItem(id) {
+  const item = document.querySelector(`.item[data-id="${id}"]`);
+  item.remove();
+  chrome.runtime.sendMessage({ type: 'deleteItems', ids: [id] });
+}
+
+async function displayItems(feedId, itemId) {
+  data.feed = feedId ? data.feeds.find(f => f.id === feedId) : null;
+  data.feedId = feedId;
+  if (itemId) {
+    const { data: item } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { id: itemId } });
+    data.items = [item];
+    chrome.storage.local.set({ selectedPostId: null });
+  } else {
+    const { data: items } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { feedId } });
+    data.items = items.sort((a, b) => b.dateTs - a.dateTs);
+  }
+
+  let batch = [];
+  let timeout;
+  function markAsReadBatch(itemId) {
+    if (!batch.includes(itemId)) {
+      batch.push(itemId);
+    }
+    clearTimeout(timeout);
+    timeout = setTimeout(sendBatch, 500);
+  }
+
+  function sendBatch() {
+    chrome.runtime.sendMessage({ type: 'markItemsAsRead', ids: batch });
+    if (data.groupUnreadItemsByFeedId[data.feedId]) {
+      data.groupUnreadItemsByFeedId[data.feedId] -= batch.length;
+    }
+    batch = [];
+  }
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const itemId = entry.target.dataset.id;
+        markAsReadBatch(itemId);
+        obs.unobserve(entry.target);
+      }
+    });
+  }, {
+    root: null,
+    threshold: 0
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.item').forEach(item => {
+      if (item.dataset.read === '0') {
+        observer.observe(item);
+      }
+    });
+  }, 500);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const { feeds: allFeeds } = await chrome.storage.local.get({ feeds: [] });
   data.feeds = allFeeds;
-  displayAllFeeds();
+  const { data: groupUnreadItemsByFeedId } = await chrome.runtime.sendMessage({ type: 'getUnreadItemsCountByFeeds' });
+  data.groupUnreadItemsByFeedId = groupUnreadItemsByFeedId;
   await chrome.storage.local.get({ selectedPostId: null }).then(({ selectedPostId }) => {
     if (selectedPostId) {
       displayItems(null, selectedPostId);
