@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RSSBox",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "Read your RSS feeds with a simple and clean interface",
   "permissions": [
     "storage",

@@ -60,7 +60,7 @@ const openDB = async () => {
       const db = event.target.result;
       const objectStore = db.createObjectStore("items", { keyPath: "id" });
 
-      objectStore.createIndex("link", "link", { unique: true });
+      objectStore.createIndex("link", "link", { unique: false });
       objectStore.createIndex("dateTs", "dateTs", { unique: false });
       objectStore.createIndex("isRead", "isRead", { unique: false });
       objectStore.createIndex("isStarred", "isStarred", { unique: false });
@@ -248,8 +248,6 @@ const deleteOldItems = async () => {
   });
 }
 async function deleteFeed(id) {
-  console.log('deleteFeed', id);
-
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("items", "readwrite");
@@ -283,13 +281,9 @@ async function fetchFeeds() {
 
       if (parsedData.error) {
         console.error("Error parsing RSS:", parsedData.error);
-        return;
+        continue;
       }
-      let items = feed.lastFetched ? parsedData.data.filter(item => new Date(item.pubDate) > new Date(feed.lastFetched)) : parsedData.data;
-      if (!feed.lastFetched) {
-        items = items.slice(0, 50);
-      }
-
+      let items = feed.lastFetched ? parsedData.data.filter(item => new Date(item.pubDate) > new Date(feed.lastFetched)) : parsedData.data.slice(0, 50);
       if (items?.length) {
         await insertData(items, feed.id)
       }
@@ -297,7 +291,7 @@ async function fetchFeeds() {
       feed.lastFetched = Date.now();
 
     } catch (error) {
-      console.error('Error fetching feed:', error);
+      console.error('Error fetching feed:', error.message);
     }
   }
   chrome.storage.local.set({ feeds });

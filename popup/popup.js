@@ -96,15 +96,15 @@ async function displayLatestUpdates() {
                  <img src="https://www.google.com/s2/favicons?domain=${domain(getFeed(item.feedId)?.url)}" height="14">
                  <span>${getFeed(item.feedId)?.alt || getFeed(item.feedId)?.title}</span>
               </div>
-                 <div class="title" @click="${() => openItem(item.id)}">${item.title}</div>
+                 <div class="title" @click="${() => openItem(item.id, item.feedId)}">${item.title}</div>
               </div>
             `)}
         </div>`;
   t(updatesContainer);
 }
 
-async function openItem(id) {
-  await chrome.storage.local.set({ selectedPostId: id });
+async function openItem(id, feedId) {
+  await chrome.storage.local.set({ selectedItem: { id, feedId } });
   chrome.tabs.create({ url: chrome.runtime.getURL('list/list.html') });
 }
 

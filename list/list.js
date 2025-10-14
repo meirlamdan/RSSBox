@@ -140,7 +140,7 @@ async function displayItems(feedId, itemId) {
   if (itemId) {
     const { data: item } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { id: itemId } });
     data.items = [item];
-    chrome.storage.local.set({ selectedPostId: null });
+    chrome.storage.local.set({ selectedItem: null });
   } else {
     const { data: items } = await chrome.runtime.sendMessage({ type: 'getItems', filters: { feedId } });
     data.items = items.sort((a, b) => b.dateTs - a.dateTs);
@@ -190,9 +190,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   data.feeds = allFeeds;
   const { data: groupUnreadItemsByFeedId } = await chrome.runtime.sendMessage({ type: 'getUnreadItemsCountByFeeds' });
   data.groupUnreadItemsByFeedId = groupUnreadItemsByFeedId;
-  await chrome.storage.local.get({ selectedPostId: null }).then(({ selectedPostId }) => {
-    if (selectedPostId) {
-      displayItems(null, selectedPostId);
+  await chrome.storage.local.get({ selectedItem: null }).then(({ selectedItem }) => {
+    if (selectedItem) {
+      const { id, feedId } = selectedItem;
+      displayItems(feedId, id);
     }
   });
 });

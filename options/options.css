@@ -6,6 +6,20 @@ body {
   padding: 20px;
 }
 
+.version {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 20px;
+
+  button {
+    background: none;
+    border: none;
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
 .delete-old-items,
 .fetch-feeds {
   display: flex;

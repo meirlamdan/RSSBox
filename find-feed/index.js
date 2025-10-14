@@ -19,6 +19,21 @@ export async function findRssFeed(url) {
         url: currentPage.url,
       }]
     } else {
+
+      // youTube
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        feeds.push(...await youTubeFeeds(url));
+      }
+      //reddit
+      if (url.startsWith('https://www.reddit.com/')) {
+        feeds.push(...redditFeeds(url));
+      }
+      // github
+      if (url.startsWith('https://github.com/')) {
+        feeds.push(...githubFeeds(url));
+      }
+
+
       // check for links in page
       const links = await chrome.runtime.sendMessage({
         type: "checkForRssLinks",
@@ -32,19 +47,6 @@ export async function findRssFeed(url) {
           feeds.push(link);
         });
       }
-    }
-
-    // youTube
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      feeds.push(...await youTubeFeeds(url));
-    }
-    //reddit
-    if (url.startsWith('https://www.reddit.com/')) {
-      feeds.push(...redditFeeds(url));
-    }
-    // github
-    if (url.startsWith('https://github.com/')) {
-      feeds.push(...githubFeeds(url));
     }
 
     if (feeds.length) {
