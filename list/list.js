@@ -8,7 +8,8 @@ const data = reactive({
   openMenuFeedId: null,
   feeds: [],
   feed: null,
-  items: []
+  items: [],
+  rect: null
 })
 
 const domain = (url) => new URL(url).hostname;
@@ -18,7 +19,6 @@ html`<div class="feed-title">
     <img src="https://www.google.com/s2/favicons?domain=${domain(data.feed.url)}" height="16">
     <span>${data.feed.alt || data.feed.title}</span>`}
    </div>`(document.querySelector('.feed-wrapper'));
-
 
 html`<div class="feeds">
     ${() => data.feeds.map(feed =>
@@ -31,20 +31,27 @@ html`<div class="feeds">
       </div>
         <div class="url">${feed.url}</div>
       </div>
-      <div class="feed-menu-btn" @click="${() => data.openMenuFeedId = feed.id}">⋮</div>
-      <div class="feed-menu" style="${() => feed.id !== data.openMenuFeedId ? 'display: none' : ''}">
-        <button @click="${() => editFeed(feed)}">✏️ Edit Feed Name</button>
-        <button @click="${() => clearFeed(feed.id)}">🧹 Clear Feed</button>
-        <button @click="${() => deleteFeed(feed.id)}">❌ Delete Feed</button>
-      </div>
+      <div class="feed-menu-btn" @click="${(e) => openMenu(e, feed.id)}">⋮</div>
     </div>`)}
   </div>`(document.querySelector('.feeds-wrapper'));
+
+html`${() => data.openMenuFeedId && html`<div class="feed-menu" style="left: 150px;  bottom: ${document.body.clientHeight - data.rect.y - data.rect.height +10}px;">
+        <button @click="${() => editFeed(data.openMenuFeedId)}">✏️ Edit Feed Name</button>
+        <button @click="${() => clearFeed(data.openMenuFeedId)}">🧹 Clear Feed</button>
+         ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] && html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >👀 Mark Feed as Read</button>`} 
+        <button @click="${() => deleteFeed(data.openMenuFeedId)}">❌ Delete Feed</button>
+      </div>`}`(document.body);
 
 document.addEventListener('click', (e) => {
   if (!e.target.classList.contains('feed-menu-btn') && data.openMenuFeedId) {
     data.openMenuFeedId = null;
   }
 })
+
+function openMenu(e, id) {
+  data.rect = e.target.parentElement.getBoundingClientRect();
+  data.openMenuFeedId = id;
+}
 
 async function deleteFeed(id) {
   if (!confirm('Are you sure you want to delete this feed?')) return;
@@ -69,13 +76,24 @@ async function clearFeed(id) {
   }
 }
 
-async function editFeed(feed) {
+async function editFeed(id) {
+  const feed = data.feeds.find(f => f.id === id);
   const promptResult = prompt('Enter a new title for the feed:', feed.alt || feed.title);
   if (promptResult) {
     const updatedFeeds = data.feeds.map(f => f.id === feed.id ? { ...f, alt: promptResult } : f);
     await chrome.storage.local.set({ feeds: updatedFeeds });
     data.feeds = updatedFeeds;
     showToast('Feed title updated successfully', 'success');
+  }
+}
+
+async function markFeedAsRead(id) {
+  const { success, error } = await chrome.runtime.sendMessage({ type: 'markFeedAsRead', id });
+  if (success) {
+    showToast('Feed marked as read successfully', 'success');
+    data.groupUnreadItemsByFeedId[id] = 0;
+  } else {
+    showToast(error || 'Error marking feed as read', 'error');
   }
 }
 
@@ -135,6 +153,7 @@ function deleteItem(id) {
 }
 
 async function displayItems(feedId, itemId) {
+  document.querySelector('.items').scrollIntoView();
   data.feed = feedId ? data.feeds.find(f => f.id === feedId) : null;
   data.feedId = feedId;
   if (itemId) {

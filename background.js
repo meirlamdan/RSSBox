@@ -205,6 +205,28 @@ const updatePostsAsRead = async (ids) => {
   });
 }
 
+const updateFeedAsRead = async (id) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const index = store.index("feedId");
+    const cursorRequest = index.openCursor(IDBKeyRange.only(id));
+    cursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const item = cursor.value;
+        item.isRead = 1;
+        store.put(item);
+        cursor.continue();
+      } else {
+        resolve(true);
+      }
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
+  });
+}
+
 const deleteItems = async (ids) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -319,6 +341,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.type === 'markItemsAsRead') {
       try {
         const items = await updatePostsAsRead(message.ids);
+        sendResponse({ success: true, data: items });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    }
+    else if (message.type === 'markFeedAsRead') {
+      try {
+        const items = await updateFeedAsRead(message.id);
         sendResponse({ success: true, data: items });
       } catch (err) {
         sendResponse({ success: false, error: err.message });

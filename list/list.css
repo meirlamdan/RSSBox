@@ -14,6 +14,32 @@ body {
   color: #333;
 }
 
+.feed-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+
+  button {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+
+    &:hover {
+      background: #f0f0f0;
+    }
+  }
+}
+
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -114,36 +140,6 @@ body {
 
       &:hover {
         color: #007bff;
-      }
-    }
-
-    .feed-menu {
-      position: absolute;
-      right: 10px;
-      top: 0px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      padding: 4px;
-      display: flex;
-      flex-direction: column;
-      z-index: 10;
-
-      &.hidden {
-        display: none;
-      }
-
-      button {
-        background: none;
-        border: none;
-        padding: 6px 10px;
-        text-align: right;
-        cursor: pointer;
-
-        &:hover {
-          background: #f0f0f0;
-        }
       }
     }
 
