@@ -305,13 +305,12 @@ async function fetchFeeds() {
         console.error("Error parsing RSS:", parsedData.error);
         continue;
       }
-      let items = feed.lastFetched ? parsedData.data.filter(item => new Date(item.pubDate) > new Date(feed.lastFetched)) : parsedData.data.slice(0, 50);
+      let items = feed.lastItemDate ? parsedData.data.filter(item => new Date(item.pubDate) > new Date(feed.lastItemDate)) : parsedData.data.slice(0, 50);
       if (items?.length) {
         await insertData(items, feed.id)
+        feed.lastItemDate = items.map(item => item.pubDate).sort((a, b) => new Date(b) - new Date(a))[0];
       }
-
-      feed.lastFetched = Date.now();
-
+      feed.lastChecked = Date.now();
     } catch (error) {
       console.error('Error fetching feed:', error.message);
     }

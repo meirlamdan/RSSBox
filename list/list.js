@@ -35,10 +35,10 @@ html`<div class="feeds">
     </div>`)}
   </div>`(document.querySelector('.feeds-wrapper'));
 
-html`${() => data.openMenuFeedId && html`<div class="feed-menu" style="left: 150px;  bottom: ${document.body.clientHeight - data.rect.y - data.rect.height +10}px;">
+html`${() => data.openMenuFeedId && html`<div class="feed-menu" style="left: 150px;  bottom: ${document.body.clientHeight - data.rect.y - data.rect.height + 10}px;">
         <button @click="${() => editFeed(data.openMenuFeedId)}">✏️ Edit Feed Name</button>
         <button @click="${() => clearFeed(data.openMenuFeedId)}">🧹 Clear Feed</button>
-         ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] && html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >👀 Mark Feed as Read</button>`} 
+         ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] ? html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >👀 Mark Feed as Read</button>` : ''} 
         <button @click="${() => deleteFeed(data.openMenuFeedId)}">❌ Delete Feed</button>
       </div>`}`(document.body);
 
