@@ -293,9 +293,23 @@ async function deleteFeed(id) {
 async function fetchFeeds() {
   const { feeds } = await chrome.storage.local.get({ feeds: [] });
   for (const feed of feeds) {
+    feed.lastChecked = Date.now();
     try {
-      const response = await fetch(feed.url)
+      const headers = {};
+      if (feed.etag) headers["If-None-Match"] = feed.etag;
+      if (feed.lastModified) headers["If-Modified-Since"] = feed.lastModified;
+
+      const response = await fetch(feed.url, {
+        headers
+      })
+      if (response.status === 304 || !response.ok) {
+        continue;
+      }
       const xmlText = await response.text();
+      const currentEtag = response.headers.get("ETag");
+      const currentLastModified = response.headers.get("Last-Modified");
+      if (currentEtag) feed.etag = currentEtag;
+      if (currentLastModified) feed.lastModified = currentLastModified;
       const parsedData = await chrome.runtime.sendMessage({
         type: "parseFeed",
         data: xmlText
@@ -310,7 +324,6 @@ async function fetchFeeds() {
         await insertData(items, feed.id)
         feed.lastItemDate = items.map(item => item.pubDate).sort((a, b) => new Date(b) - new Date(a))[0];
       }
-      feed.lastChecked = Date.now();
     } catch (error) {
       console.error('Error fetching feed:', error.message);
     }
