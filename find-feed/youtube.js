@@ -1,4 +1,4 @@
-export default  async function findYouTubeFeeds(url) {
+export default async function findYouTubeFeeds(url) {
   const feeds = [];
 
   try {

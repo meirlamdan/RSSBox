@@ -37,7 +37,7 @@ html`<div class="feeds">
 
 html`${() => data.openMenuFeedId && html`<div class="feed-menu" style="left: 150px;  bottom: ${document.body.clientHeight - data.rect.y - data.rect.height + 10}px;">
         <button @click="${() => editFeed(data.openMenuFeedId)}">✏️ Edit Feed Name</button>
-        <button @click="${() => clearFeed(data.openMenuFeedId)}">🧹 Clear Feed</button>
+        <button @click="${() => clearFeed(data.openMenuFeedId)}">🧹 Delete All Items</button>
          ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] ? html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >👀 Mark Feed as Read</button>` : ''} 
         <button @click="${() => deleteFeed(data.openMenuFeedId)}">❌ Delete Feed</button>
       </div>`}`(document.body);
@@ -60,6 +60,10 @@ async function deleteFeed(id) {
   if (success) {
     showToast('Feed deleted successfully', 'success');
     data.feeds = data.feeds.filter(f => f.id !== id);
+    if (data.feedId === id) {
+      data.feed = null;
+      data.items = [];
+    }
   } else {
     showToast(error, 'error');
   }
@@ -69,7 +73,9 @@ async function clearFeed(id) {
   const { success, error } = await chrome.runtime.sendMessage({ type: 'clearFeed', id });
   if (success) {
     showToast('Feed cleared successfully', 'success');
-    document.querySelector('.items').innerHTML = '';
+   if(data.feedId === id) {
+     data.items = [];
+   }
     data.groupUnreadItemsByFeedId[id] = 0;
   } else {
     showToast(error || 'Error clearing feed', 'error');
@@ -249,6 +255,17 @@ document.querySelector('.delete-all').addEventListener('click', async () => {
     showToast(error || 'Error deleting all items', 'error');
   }
 });
+
+document.querySelector('.mark-all-read').addEventListener('click', async () => {
+  const { success, error } = await chrome.runtime.sendMessage({ type: 'markAllAsRead' });
+  if (success) {
+    showToast('All items marked as read successfully', 'success');
+    document.querySelector('.items').innerHTML = '';
+    data.groupUnreadItemsByFeedId = {};
+  } else {
+    showToast(error || 'Error marking all items as read', 'error');
+  }
+})
 
 document.querySelector('.options').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();

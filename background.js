@@ -220,6 +220,30 @@ const updateFeedAsRead = async (id) => {
         store.put(item);
         cursor.continue();
       } else {
+        countUnreadItems();
+        resolve(true);
+      }
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
+  });
+}
+
+const updateAllFeedAsRead = async () => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const index = store.index("isRead");
+    const cursorRequest = index.openCursor(IDBKeyRange.only(0));
+    cursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const item = cursor.value;
+        item.isRead = 1;
+        store.put(item);
+        cursor.continue();
+      } else {
+        countUnreadItems();
         resolve(true);
       }
     };
@@ -361,6 +385,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.type === 'markFeedAsRead') {
       try {
         const items = await updateFeedAsRead(message.id);
+        sendResponse({ success: true, data: items });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    }
+    else if (message.type === 'markAllAsRead') {
+      try {
+        const items = await updateAllFeedAsRead();
         sendResponse({ success: true, data: items });
       } catch (err) {
         sendResponse({ success: false, error: err.message });

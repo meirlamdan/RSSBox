@@ -39,7 +39,7 @@ export function parseFeed(xmlText) {
       link: text(item, "link"),
       pubDate: text(item, "pubDate") || text(item, "dc:date"),
       guid: text(item, "guid"),
-      description: text(item, "description"),
+      description: text(item, "content:encoded")?.replace(/<[^>]+>/g, "").startsWith(text(item, "description")?.replace(/<[^>]+>/g, "")) ? "" : text(item, "description"),
       content: text(item, "content:encoded"),
       media: extractMedia(item)
     }));
@@ -55,7 +55,7 @@ export function parseFeed(xmlText) {
         "",
       pubDate: text(entry, "published") || text(entry, "updated"),
       guid: text(entry, "id"),
-      description: text(entry, "summary") || text(entry, "media:description"),
+      description: text(entry, "content")?.replace(/<[^>]+>/g, "").startsWith(text(entry, "summary")?.replace(/<[^>]+>/g, "") || text(entry, "media:description")?.replace(/<[^>]+>/g, "")) ? "" : text(entry, "summary") || text(entry, "media:description"),
       content: text(entry, "content"),
       media: extractMedia(entry)
     }));

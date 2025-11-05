@@ -54,25 +54,29 @@ export async function findRssFeed(url) {
     }
 
     if (new URL(url).pathname !== '/' && new URL(url).pathname !== '') {
-      // check in home page
-      const page = await fetch(domain);
-      const homePageContent = await page.text();
-      const links = await chrome.runtime.sendMessage({
-        type: "checkForRssLinks",
-        data: homePageContent
-      });
-
-      if (links.data) {
-        links.data.forEach(link => {
-          if (!link.url.startsWith(domain)) {
-            link.url = domain + link.url
-          }
-          feeds.push(link);
+      try {
+        // check in home page
+        const page = await fetch(domain);
+        const homePageContent = await page.text();
+        const links = await chrome.runtime.sendMessage({
+          type: "checkForRssLinks",
+          data: homePageContent
         });
-        return uniqueFeeds(feeds);
-      }
-      if (links.error) {
-        console.error(links.error);
+
+        if (links.data) {
+          links.data.forEach(link => {
+            if (!link.url.startsWith(domain)) {
+              link.url = domain + link.url
+            }
+            feeds.push(link);
+          });
+          return uniqueFeeds(feeds);
+        }
+        if (links.error) {
+          console.error(links.error);
+        }
+      } catch (error) {
+        console.log('error fetching home page', error);
       }
     }
 

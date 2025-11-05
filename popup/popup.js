@@ -11,6 +11,10 @@ document.querySelector('.find-feeds:not(.active)').addEventListener('click', asy
   if (data.feedsResults.length) {
     return;
   }
+  if (!navigator.onLine) {
+    showToast('You are offline', 'error');
+    return;
+  }
   document.querySelector('.find-feeds').classList.add('active');
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const response = await chrome.runtime.sendMessage({
