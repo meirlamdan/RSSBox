@@ -9,22 +9,49 @@ const data = reactive({
   feeds: [],
   feed: null,
   items: [],
-  rect: null
+  rect: null,
+  draggedIndex: null,
+  dragOverIndex: null
 })
 
 const domain = (url) => new URL(url).hostname;
 
-html`<div class="feed-title">
+html`<div class="feed">
   ${() => data.feed && html`
-    <img src="https://www.google.com/s2/favicons?domain=${domain(data.feed.url)}" height="16">
-    <span>${data.feed.alt || data.feed.title}</span>`}
+    <div class="feed-title">
+     <span>${data.feed.alt || data.feed.title}</span>
+    </div>
+  <div class="feed-url">
+    <a href="${data.feed.url}" target="_blank">
+      <img src="https://www.google.com/s2/favicons?domain=${domain(data.feed.url)}" height="16">
+      <span class="url">${data.feed.url}</span>
+    </a>
+</div>
+  <div>
+    <div class="feed-meta">
+     <span>items: <b>${() => data.items.length}</b></span> 
+     <span>unread: <b>${() => data.groupUnreadItemsByFeedId[data.feedId]|| 0}</b></span>
+     <span>last update: <b>${formatDate(data.feed?.lastItemDate)}</b></span>
+     <span>last check: <b>${formatDate(data.feed?.lastChecked)}</b></span>
+    </div>
+  </div>`}
    </div>`(document.querySelector('.feed-wrapper'));
 
 html`<div class="feeds">
-    ${() => data.feeds.map(feed =>
-  html`<div class="${() => feed.id === data.feedId ? 'feed-item active' : 'feed-item'}" data-id="${feed.id}">
+    ${() => data.feeds.map((feed, index) =>
+  html`<div 
+      class="${() => feed.id === data.feedId ? 'feed-item active' : 'feed-item'}" 
+      data-id="${feed.id}"
+      @dragenter="${handleDragEnter(index)}"
+      @dragover="${handleDragOver}"
+      @dragleave="${handleDragLeave}"
+      @drop="${handleDrop(index)}">
+     <div class="drag-handle"
+       draggable="true"
+       @dragstart="${handleDragStart(index)}"
+       @dragend="${handleDragEnd}">⋮⋮</div>
       <div class="feed"  @click="${() => displayItems(feed.id)}">
-        <div class="unread">${() => data.groupUnreadItemsByFeedId[feed.id] ? data.groupUnreadItemsByFeedId[feed.id] : ''}</div>
+      <div class="unread" style="${() => !data.groupUnreadItemsByFeedId[feed.id] ? 'display: none' : ''}">${() => data.groupUnreadItemsByFeedId[feed.id] ? data.groupUnreadItemsByFeedId[feed.id] : ''}</div>
       <div class="title">
         <img src="https://www.google.com/s2/favicons?domain=${domain(feed.url)}" height="16">
         <span>${feed.alt || feed.title}</span>
@@ -73,9 +100,9 @@ async function clearFeed(id) {
   const { success, error } = await chrome.runtime.sendMessage({ type: 'clearFeed', id });
   if (success) {
     showToast('Feed cleared successfully', 'success');
-   if(data.feedId === id) {
-     data.items = [];
-   }
+    if (data.feedId === id) {
+      data.items = [];
+    }
     data.groupUnreadItemsByFeedId[id] = 0;
   } else {
     showToast(error || 'Error clearing feed', 'error');
@@ -102,6 +129,63 @@ async function markFeedAsRead(id) {
     showToast(error || 'Error marking feed as read', 'error');
   }
 }
+
+// drag and drop
+function swapFeeds(fromIndex, toIndex) {
+  const newFeeds = [...data.feeds];
+  const [movedFeed] = newFeeds.splice(fromIndex, 1);
+  newFeeds.splice(toIndex, 0, movedFeed);
+  data.feeds = newFeeds;
+  chrome.storage.local.set({ feeds: newFeeds });
+}
+
+const handleDragStart = (index) => (e) => {
+  data.draggedIndex = index;
+  const feedElement = e.target.closest('.feed-item');
+  feedElement.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setDragImage(feedElement, 10, 10);
+  e.dataTransfer.setData('text/plain', index);
+};
+
+const handleDragEnd = (e) => {
+  const feedElement = e.target.closest('.feed-item');
+  feedElement.classList.remove('dragging');
+
+  if (data.draggedIndex !== null && data.dragOverIndex !== null && data.draggedIndex !== data.dragOverIndex) {
+    swapFeeds(data.draggedIndex, data.dragOverIndex);
+  }
+
+  data.draggedIndex = null;
+  data.dragOverIndex = null;
+
+  document.querySelectorAll('.feed-item').forEach(el => {
+    el.classList.remove('drag-over');
+  });
+};
+
+const handleDragEnter = (index) => (e) => {
+  e.preventDefault();
+  if (data.draggedIndex !== index) {
+    data.dragOverIndex = index;
+    e.currentTarget.classList.add('drag-over');
+  }
+};
+
+const handleDragOver = (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+};
+
+const handleDragLeave = (e) => {
+  e.currentTarget.classList.remove('drag-over');
+};
+
+const handleDrop = () => (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+};
+// end drag and drop 
 
 function renderMedia(media) {
   if (media.url.includes('youtube.com') || media.url.includes('youtu.be')) {
@@ -153,8 +237,7 @@ html`<div>
     </div>`(document.querySelector('.items'));
 
 function deleteItem(id) {
-  const item = document.querySelector(`.item[data-id="${id}"]`);
-  item.remove();
+  data.items = data.items.filter(i => i.id !== id);
   chrome.runtime.sendMessage({ type: 'deleteItems', ids: [id] });
 }
 

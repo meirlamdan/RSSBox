@@ -19,7 +19,7 @@ document.getElementById("checkUpdate").addEventListener("click", () => {
   chrome.runtime.requestUpdateCheck((status, details) => {
     if (status === "update_available") {
       statusEl.textContent = "New version found: " + details.version + " | Reloading...";
-      chrome.runtime.reload();
+      setTimeout(() => chrome.runtime.reload(), 1000);
     } else if (status === "no_update") {
       statusEl.textContent = "No updates available (you already have the latest version).";
     } else if (status === "throttled") {
