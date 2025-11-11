@@ -1,6 +1,8 @@
 import { html, reactive } from '../arrow.mjs'
 import { formatDate, timeAgo } from '../date.js';
 import { showToast } from "../toast.js";
+import Item from '../components/Item.js';
+import Svg from '../components/Svg.js';
 
 const data = reactive({
   feedId: null,
@@ -30,7 +32,7 @@ html`<div class="feed">
   <div>
     <div class="feed-meta">
      <span>items: <b>${() => data.items.length}</b></span> 
-     <span>unread: <b>${() => data.groupUnreadItemsByFeedId[data.feedId]|| 0}</b></span>
+     <span>unread: <b>${() => data.groupUnreadItemsByFeedId[data.feedId] || 0}</b></span>
      <span>last update: <b>${formatDate(data.feed?.lastItemDate)}</b></span>
      <span>last check: <b>${formatDate(data.feed?.lastChecked)}</b></span>
     </div>
@@ -62,11 +64,11 @@ html`<div class="feeds">
     </div>`)}
   </div>`(document.querySelector('.feeds-wrapper'));
 
-html`${() => data.openMenuFeedId && html`<div class="feed-menu" style="left: 150px;  bottom: ${document.body.clientHeight - data.rect.y - data.rect.height + 10}px;">
-        <button @click="${() => editFeed(data.openMenuFeedId)}">✏️ Edit Feed Name</button>
-        <button @click="${() => clearFeed(data.openMenuFeedId)}">🧹 Delete All Items</button>
-         ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] ? html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >👀 Mark Feed as Read</button>` : ''} 
-        <button @click="${() => deleteFeed(data.openMenuFeedId)}">❌ Delete Feed</button>
+html`${() => data.openMenuFeedId && html`<div class="feed-menu" style=" bottom: ${document.body.clientHeight - data.rect.y - data.rect.height + 10}px;">
+        <button @click="${() => editFeed(data.openMenuFeedId)}">${Svg('edit')} <span>Edit Feed Name</span></button>
+        <button @click="${() => clearFeed(data.openMenuFeedId)}">${Svg('delete')} <span>Delete Feed Items</span></button>
+         ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] ? html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >${Svg('read')} <span>Mark as Read</span></button>` : ''} 
+        <button @click="${() => deleteFeed(data.openMenuFeedId)}">${Svg('remove')} <span>Delete Feed</span></button>
       </div>`}`(document.body);
 
 document.addEventListener('click', (e) => {
@@ -187,59 +189,9 @@ const handleDrop = () => (e) => {
 };
 // end drag and drop 
 
-function renderMedia(media) {
-  if (media.url.includes('youtube.com') || media.url.includes('youtu.be')) {
-    const iframeVideoId = new URL(media.url).searchParams.get('v') || new URL(media.url).pathname.split('/').pop();
 
-    return html`<iframe width="${media.width}" height="${media.height}" src="${`https://www.youtube.com/embed/${iframeVideoId}`}"
-      title="YouTube video player" frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen>
-          </iframe >`
-  }
-
-  if (!media.type || media.type?.startsWith("image/")) {
-    return html`<img src="${media.url}" width="${media.width}" height="${media.height}" /> `;
-  }
-
-  if (media.type?.startsWith("video/")) {
-    return html`<video controls width = "${media.width}" height = "${media.height}">
-        <source src="${media.url}" type="${media.type}" />
-      </video>`;
-  }
-
-  if (media.type?.startsWith("audio/")) {
-    return html`<audio controls >
-        <source src="${media.url}" type="${media.type}" />
-      </audio > `;
-  }
-
-  return null;
-}
-
-html`<div>
-        ${() => data.items.map(item =>
-  html`<div class="item ${item.isRead === 0 ? 'unread' : ''}" data-id="${item.id}" data-read="${item.isRead}">
-        <div class="item-details">
-         <div class="date">${formatDate(item.dateTs)}</div>
-         <div class="actions">
-          <div class="delete" @click="${() => deleteItem(item.id)}">
-           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE --><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16m-10 4v6m4-6v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
-          </div>
-         </div>
-        </div>
-        <a class="item-title" href="${item.link}" target="_blank">${item.title}</a>
-        ${item.media ? html`<div class="media">${renderMedia(item.media)}</div>` : ''}
-        <div class="description">${item.description || ''}</div>
-        <div class="content">${item.content || ''}</div>
-      </div>
-    `)}
+html`<div> ${() => data.items.map(item => Item(item, data))}
     </div>`(document.querySelector('.items'));
-
-function deleteItem(id) {
-  data.items = data.items.filter(i => i.id !== id);
-  chrome.runtime.sendMessage({ type: 'deleteItems', ids: [id] });
-}
 
 async function displayItems(feedId, itemId) {
   document.querySelector('.items').scrollIntoView();
@@ -332,7 +284,7 @@ document.querySelector('.delete-all').addEventListener('click', async () => {
   const { success, error } = await chrome.runtime.sendMessage({ type: 'deleteAllItems' });
   if (success) {
     showToast('All items deleted successfully', 'success');
-    document.querySelector('.items').innerHTML = '';
+    data.items = [];
     data.groupUnreadItemsByFeedId = {};
   } else {
     showToast(error || 'Error deleting all items', 'error');
@@ -343,7 +295,6 @@ document.querySelector('.mark-all-read').addEventListener('click', async () => {
   const { success, error } = await chrome.runtime.sendMessage({ type: 'markAllAsRead' });
   if (success) {
     showToast('All items marked as read successfully', 'success');
-    document.querySelector('.items').innerHTML = '';
     data.groupUnreadItemsByFeedId = {};
   } else {
     showToast(error || 'Error marking all items as read', 'error');

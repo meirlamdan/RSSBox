@@ -15,7 +15,9 @@ body {
 }
 
 .feed-menu {
+  width: 150px;
   position: fixed;
+  left: 140px;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -32,9 +34,20 @@ body {
     text-align: left;
     cursor: pointer;
     font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    svg {
+      transition: color 0.2s ease;
+    }
 
     &:hover {
       background: #f0f0f0;
+
+      svg {
+        color: #007bff;
+      }
     }
   }
 }
