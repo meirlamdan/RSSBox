@@ -103,16 +103,25 @@ async function displayLatestUpdates() {
                  <img src="https://www.google.com/s2/favicons?domain=${domain(getFeed(item.feedId)?.url)}" height="14">
                  <span>${getFeed(item.feedId)?.alt || getFeed(item.feedId)?.title}</span>
               </div>
-                 <div class="title" @click="${() => openItem(item.id, item.feedId)}">${item.title}</div>
+                 <div class="title" @click="${() => openListPage(item.id)}">${item.title}</div>
               </div>
             `)}
         </div>`;
   t(updatesContainer);
 }
 
-async function openItem(id, feedId) {
-  await chrome.storage.local.set({ selectedItem: { id, feedId } });
-  chrome.tabs.create({ url: chrome.runtime.getURL('list/list.html') });
+async function openListPage(id) {
+  if (id) {
+    await chrome.storage.local.set({ selectedItem: { id } });
+  }
+  const url = chrome.runtime.getURL('list/list.html');
+  const tabs = await chrome.tabs.query({ url });
+  if (tabs.length) {
+    await chrome.tabs.reload(tabs[0].id);
+    chrome.tabs.update(tabs[0].id, { active: true });
+    return;
+  }
+  chrome.tabs.create({ url });
 }
 
 function deleteItem(id) {
@@ -137,4 +146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!tab.url || !tab.url.startsWith('http')) {
     findRSSFeeds.style.display = 'none';
   }
+});
+
+document.querySelector('.view-all-feeds').addEventListener('click', async () => {
+  openListPage(null);
 });

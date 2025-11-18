@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "RSSBox",
-  "version": "0.0.14",
-  "description": "Read your RSS feeds with a simple and clean interface",
+  "version": "0.0.15",
+  "description": "Read and manage your RSS feeds with a fast, clean interface — discover feeds from any website automatically.",
   "permissions": [
     "storage",
     "activeTab",

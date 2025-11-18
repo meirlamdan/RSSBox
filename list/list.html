@@ -11,7 +11,7 @@
     <h1 class="title"><span>RSSBox</span> <img src="../images/icon32.png" height="24"></h1>
     <div class="feed-wrapper"></div>
     <div class="actions">
-      <button class="refresh" title="Refresh All Feeds">
+      <button class="refresh" title="Check all feeds for updates">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
           viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE -->
           <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
@@ -50,9 +50,11 @@
     </div>
   </div>
   <div class="feeds-container">
-    <div class="feeds-wrapper"></div>
+    <div class="feeds-wrapper">
+      <div class="all-items-btn">Show items of all feeds </div>
+    </div>
     <div class="items-wrapper">
-      <div class="items" dir="auto"></div>
+      <div class="items"></div>
     </div>
   </div>
   <script type="module" src="list.js"></script>

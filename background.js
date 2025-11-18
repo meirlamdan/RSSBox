@@ -9,6 +9,28 @@ async function createOffscreenDocument() {
   }
 }
 
+//only for migration from previous version
+async function changeNotStartedToZero() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const cursorRequest = store.openCursor();
+    cursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor && cursor.value.isStarred !== 0 && cursor.value.isStarred !== 2) {
+        const item = cursor.value;
+        item.isStarred = 0;
+        store.put(item);
+        cursor.continue();
+      } else {
+        resolve(true);
+      }
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
+  });
+}
+
 chrome.runtime.onInstalled.addListener(async () => {
   await createOffscreenDocument();
   if (navigator.onLine) {
@@ -16,6 +38,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
   await countUnreadItems();
   await deleteOldItems();
+  await changeNotStartedToZero();
 });
 
 chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 }).then(({ fetchFeedsIntervalMinutes }) => {
@@ -81,7 +104,7 @@ const insertData = async (items, feedId) => {
 
     for (const item of items) {
       const { guid, title, link, description, content, media, pubDate } = item;
-      const newItem = { id: guid, feedId, title, link, description, content, media, pubDate, dateTs: new Date(pubDate).getTime(), createdAt: Date.now(), isRead: 0 };
+      const newItem = { id: guid, feedId, title, link, description, content, media, pubDate, dateTs: new Date(pubDate).getTime(), createdAt: Date.now(), isRead: 0, isStarred: 0 };
       store.put(newItem);
     }
     tx.oncomplete = () => resolve(true);
@@ -89,22 +112,43 @@ const insertData = async (items, feedId) => {
   });
 };
 
-const selectData = async (filters = {}) => {
+const selectData = async ({ id, feedId, dateTs, limit = 20, unreadOnly, starredOnly } = {}) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("items", "readonly");
     const store = tx.objectStore("items");
     let request;
-    if (filters.id) {
-      request = store.get(filters.id);
-    } else if (filters?.feedId) {
+    if (id) {
+      request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    } else if (feedId) {
       const index = store.index("feedId");
-      request = index.getAll(IDBKeyRange.only(filters.feedId));
+      request = index.getAll(IDBKeyRange.only(feedId));
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
     } else {
-      request = store.getAll();
+      const index = store.index("dateTs");
+      const range = dateTs ? IDBKeyRange.upperBound(dateTs, true) : null;
+      const items = [];
+      const countRequest = index.count();
+      countRequest.onsuccess = (event) => {
+        const cursorRequest = index.openCursor(range, 'prev');
+        cursorRequest.onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (cursor && items.length < limit) {
+            if ((!unreadOnly || (unreadOnly && !cursor.value.isRead)) && (!starredOnly || (starredOnly && cursor.value.isStarred))) {
+              items.push(cursor.value);
+            }
+            cursor.continue();
+          } else {
+            resolve({ items, count: countRequest.result });
+          }
+        };
+        cursorRequest.onerror = () => reject(cursorRequest.error);
+      }
+      countRequest.onerror = () => reject(countRequest.error);
     }
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
   });
 };
 
@@ -132,6 +176,17 @@ const getLatestItemsNotRead = async () => {
     cursorRequest.onerror = () => reject(cursorRequest.error);
   });
 }
+
+const countItems = async () => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readonly");
+    const store = tx.objectStore("items");
+    const countRequest = store.count();
+    countRequest.onsuccess = () => resolve(countRequest.result);
+    countRequest.onerror = () => reject(countRequest.error);
+  });
+};
 
 const countUnreadItems = async () => {
   const db = await openDB();
@@ -252,6 +307,10 @@ const updateAllFeedAsRead = async () => {
 }
 
 const deleteItems = async (ids) => {
+  if (ids?.length >= 2) {
+    const itemsStarred = await selectData({ starredOnly: true, limit: null });
+    ids = ids.filter(id => !itemsStarred.find(i => i.id === id));
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("items", "readwrite");
@@ -259,15 +318,28 @@ const deleteItems = async (ids) => {
     if (ids) {
       ids.forEach(id => {
         store.delete(id);
+        tx.oncomplete = () => {
+          countUnreadItems();
+          resolve(true);
+        };
+        tx.onerror = () => reject(tx.error);
       });
     } else {
-      store.clear();
+      const index = store.index("isStarred");
+      const cursorRequest = index.openCursor(IDBKeyRange.only(0));
+      cursorRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const item = cursor.value;
+          store.delete(item.id);
+          cursor.continue();
+        } else {
+          countUnreadItems();
+          resolve(true);
+        }
+      };
+      cursorRequest.onerror = () => reject(cursorRequest.error);
     }
-    tx.oncomplete = () => {
-      countUnreadItems();
-      resolve(true);
-    };
-    tx.onerror = () => reject(tx.error);
   });
 }
 
@@ -282,9 +354,11 @@ const deleteOldItems = async () => {
     const cursorRequest = index.openCursor();
     cursorRequest.onsuccess = (event) => {
       const cursor = event.target.result;
-      if (cursor && cursor.value.dateTs < timeAgo) {
-        const id = cursor.value.id;
-        store.delete(id);
+      if (cursor) {
+        if ((cursor.value.dateTs < timeAgo) && !cursor.value.isStarred) {
+          const id = cursor.value.id;
+          store.delete(id);
+        }
         cursor.continue();
       } else {
         resolve(true);
@@ -293,7 +367,8 @@ const deleteOldItems = async () => {
     cursorRequest.onerror = () => reject(cursorRequest.error);
   });
 }
-async function deleteFeed(id) {
+
+async function deleteFeedItems(id, alsoStarred) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("items", "readwrite");
@@ -304,7 +379,9 @@ async function deleteFeed(id) {
       const cursor = event.target.result;
       if (cursor) {
         const id = cursor.value.id;
-        store.delete(id);
+        if (alsoStarred || !cursor.value.isStarred) {
+          store.delete(id);
+        }
         cursor.continue();
       } else {
         countUnreadItems();
@@ -314,15 +391,33 @@ async function deleteFeed(id) {
     cursorRequest.onerror = () => reject(cursorRequest.error);
   });
 }
-async function fetchFeeds() {
+
+const updateItems = async (items) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    items.forEach(item => {
+      store.put(item);
+    });
+    tx.oncomplete = () => {
+      // countUnreadItems();
+      resolve(true);
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function fetchFeeds(feedId) {
   const { feeds } = await chrome.storage.local.get({ feeds: [] });
+  let isNewItems = false;
   for (const feed of feeds) {
+    if (feedId && feed.id !== feedId) continue;
     feed.lastChecked = Date.now();
     try {
       const headers = {};
       if (feed.etag) headers["If-None-Match"] = feed.etag;
       if (feed.lastModified) headers["If-Modified-Since"] = feed.lastModified;
-
       const response = await fetch(feed.url, {
         headers
       })
@@ -347,13 +442,20 @@ async function fetchFeeds() {
       if (items?.length) {
         await insertData(items, feed.id)
         feed.lastItemDate = items.map(item => item.pubDate).sort((a, b) => new Date(b) - new Date(a))[0];
+        isNewItems = true;
+      }
+      if (isNewItems) {
+        chrome.runtime.sendMessage({
+          type: "newItems",
+          data: feeds
+        });
       }
     } catch (error) {
       console.error('Error fetching feed:', error.message);
     }
   }
   chrome.storage.local.set({ feeds });
-  countUnreadItems();
+  await countUnreadItems();
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -431,21 +533,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const id = message.id;
         const feeds = await chrome.storage.local.get({ feeds: [] });
         await chrome.storage.local.set({ feeds: feeds.feeds.filter(feed => feed.id !== id) });
-        const data = await deleteFeed(id);
+        const data = await deleteFeedItems(id, true);
         sendResponse({ success: true, data });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
       }
     } else if (message.type === 'clearFeed') {
       try {
-        const data = await deleteFeed(message.id);
+        const data = await deleteFeedItems(message.id);
+        sendResponse({ success: true, data });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+
+    } else if (message.type === 'updateItems') {
+      try {
+        const data = await updateItems(message.items);
         sendResponse({ success: true, data });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
       }
     } else if (message.type === 'fetchFeeds') {
       try {
-        const data = await fetchFeeds();
+        await fetchFeeds(message.feedId);
+        sendResponse({ success: true });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    } else if (message.type === 'countItems') {
+      try {
+        const data = await countItems();
         sendResponse({ success: true, data });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
@@ -454,5 +571,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   })();
   return true;
 })
+
+self.onerror = e => console.error("SW ERROR:", e);
+self.onunhandledrejection = e => console.error("SW PROMISE ERROR:", e.reason);
+
 
 

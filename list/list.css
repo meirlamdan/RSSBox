@@ -15,9 +15,9 @@ body {
 }
 
 .feed-menu {
-  width: 150px;
+  width: 155px;
   position: fixed;
-  left: 140px;
+  left: 135px;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -30,8 +30,8 @@ body {
   button {
     background: none;
     border: none;
-    padding: 6px 10px;
-    text-align: left;
+    padding: 6px;
+    /* text-align: left; */
     cursor: pointer;
     font-size: 12px;
     display: flex;
@@ -140,6 +140,25 @@ body {
       font-size: 0.9em;
       color: #666;
     }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 25px;
+
+      .filter {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #666;
+
+        [type="checkbox"] {
+          accent-color: #007bff;
+          cursor: pointer;
+        }
+      }
+    }
   }
 }
 
@@ -163,13 +182,36 @@ body {
 
 .feeds-container {
   display: flex;
-  height: calc(100vh - 85px);
+  background-color: rgb(217 119 6);
+  height: calc(100vh - 135px);
 }
 
-.feeds {
+.feeds-wrapper {
   width: 300px;
   background: white;
   border-right: 1px solid #e0e0e0;
+
+  .all-items-btn {
+    text-align: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: #f8f8f8;
+    }
+
+    &.active {
+      background: #eaf3ff;
+      border-left: 4px solid #007bff;
+      font-weight: 600;
+
+    }
+  }
+}
+
+.feeds {
   height: 100%;
   overflow: auto;
   scrollbar-width: thin;
@@ -302,6 +344,24 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     transition: box-shadow 0.2s ease;
 
+    .feed {
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      margin-inline: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: #f0f0f0;
+      border-radius: 4px;
+
+      padding: 4px 8px;
+      width: fit-content;
+    }
+
     a {
       word-wrap: break-word;
       overflow-wrap: break-word;
@@ -320,11 +380,11 @@ body {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      margin-bottom: 15px;
 
       .date {
         font-size: 12px;
         color: #888;
-        margin-bottom: 6px;
       }
 
       .actions {
@@ -444,7 +504,5 @@ body {
       direction: ltr;
       text-align: left;
     }
-
   }
-
 }
