@@ -233,10 +233,12 @@ async function displayItems(id) {
 
   function sendBatch() {
     chrome.runtime.sendMessage({ type: 'markItemsAsRead', ids: batch });
-    const feedId = data.items.find(i => i.id === batch[0]).feedId;
-    if (data.groupUnreadItemsByFeedId[feedId]) {
-      data.groupUnreadItemsByFeedId[feedId] -= batch.length;
-    }
+    batch.forEach(id => {
+      const feedId = data.items.find(i => i.id === id).feedId;
+      if (data.groupUnreadItemsByFeedId[feedId]) {
+        data.groupUnreadItemsByFeedId[feedId] -= 1;
+      }
+    })
     batch = [];
   }
   const observer = new IntersectionObserver((entries, obs) => {

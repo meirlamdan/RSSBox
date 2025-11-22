@@ -1,80 +1,18 @@
 import { findRssFeed } from './find-feed/index.js';
+
 async function createOffscreenDocument() {
-  if (!(await chrome.offscreen.hasDocument())) {
-    await chrome.offscreen.createDocument({
-      url: "offscreen.html",
-      reasons: ["DOM_PARSER"],
-      justification: "Need to parse XML for RSS feed"
-    });
-  }
-}
-
-//only for migration from previous version
-async function changeNotStartedToZero() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("items", "readwrite");
-    const store = tx.objectStore("items");
-    const cursorRequest = store.openCursor();
-    cursorRequest.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor && cursor.value.isStarred !== 0 && cursor.value.isStarred !== 2) {
-        const item = cursor.value;
-        item.isStarred = 0;
-        store.put(item);
-        cursor.continue();
-      } else {
-        resolve(true);
-      }
-    };
-    cursorRequest.onerror = () => reject(cursorRequest.error);
-  });
-}
-
-chrome.runtime.onInstalled.addListener(async () => {
-  await createOffscreenDocument();
-  if (navigator.onLine) {
-    await fetchFeeds()
-  }
-  await countUnreadItems();
-  await deleteOldItems();
-  await changeNotStartedToZero();
-});
-
-chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 }).then(({ fetchFeedsIntervalMinutes }) => {
-  chrome.alarms.create('fetch-feeds', { periodInMinutes: Number(fetchFeedsIntervalMinutes) });
-})
-
-chrome.alarms.create('delete-old-items', { periodInMinutes: 24 * 60 });
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'fetch-feeds') {
-    if (navigator.onLine) {
-      fetchFeeds();
-    } else {
-      chrome.storage.local.set({ pendingFetch: true });
-      chrome.alarms.create('check-online', { periodInMinutes: 3 });
-    }
-  } else if (alarm.name === 'check-online') {
-    if (navigator.onLine) {
-      chrome.storage.local.get('pendingFetch', (result) => {
-        if (result.pendingFetch) {
-          fetchFeeds();
-          chrome.storage.local.set({ pendingFetch: false });
-        }
+  try {
+    if (!(await chrome.offscreen.hasDocument())) {
+      await chrome.offscreen.createDocument({
+        url: "offscreen.html",
+        reasons: ["DOM_PARSER"],
+        justification: "Need to parse XML for RSS feed"
       });
-      chrome.alarms.clear('check-online');
     }
-  } else if (alarm.name === 'delete-old-items') {
-    deleteOldItems();
+  } catch (err) {
+    console.warn('createOffscreenDocument failed:', err);
   }
-});
-
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.type === 'subscribe') {
-    fetchFeeds();
-  }
-});
+}
 
 const openDB = async () => {
   return new Promise((resolve, reject) => {
@@ -96,6 +34,31 @@ const openDB = async () => {
   });
 };
 
+// only for migration from previous version
+async function changeNotStartedToZero() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("items", "readwrite");
+    const store = tx.objectStore("items");
+    const cursorRequest = store.openCursor();
+    cursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor && cursor.value.isStarred !== 0 && cursor.value.isStarred !== 2) {
+        const item = cursor.value;
+        item.isStarred = 0;
+        store.put(item);
+        cursor.continue();
+      } else {
+        resolve(true);
+      }
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
+  });
+}
+
+/* -----------------------
+   Data operations
+   ----------------------- */
 const insertData = async (items, feedId) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -104,7 +67,20 @@ const insertData = async (items, feedId) => {
 
     for (const item of items) {
       const { guid, title, link, description, content, media, pubDate } = item;
-      const newItem = { id: guid, feedId, title, link, description, content, media, pubDate, dateTs: new Date(pubDate).getTime(), createdAt: Date.now(), isRead: 0, isStarred: 0 };
+      const newItem = {
+        id: guid,
+        feedId,
+        title,
+        link,
+        description,
+        content,
+        media,
+        pubDate,
+        dateTs: new Date(pubDate).getTime(),
+        createdAt: Date.now(),
+        isRead: 0,
+        isStarred: 0
+      };
       store.put(newItem);
     }
     tx.oncomplete = () => resolve(true);
@@ -155,7 +131,6 @@ const selectData = async ({ id, feedId, dateTs, limit = 20, unreadOnly, starredO
 const getLatestItemsNotRead = async () => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-
     const tx = db.transaction("items", "readonly");
     const index = tx.objectStore("items").index("dateTs");
     const items = [];
@@ -164,7 +139,6 @@ const getLatestItemsNotRead = async () => {
       const cursor = event.target.result;
       if (cursor && items.length < 20) {
         const item = cursor.value;
-
         if (item.isRead === 0) {
           items.push(item);
         }
@@ -344,7 +318,7 @@ const deleteItems = async (ids) => {
 }
 
 const deleteOldItems = async () => {
-  const days = (await chrome.storage.local.get({ deleteOldItemsIntervalDays: 30 })).deleteOldItemsIntervalDays;
+  const { deleteOldItemsIntervalDays: days } = await chrome.storage.local.get({ deleteOldItemsIntervalDays: 30 });
   const timeAgo = Date.now() - days * 24 * 60 * 60 * 1000;
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -420,7 +394,7 @@ async function fetchFeeds(feedId) {
       if (feed.lastModified) headers["If-Modified-Since"] = feed.lastModified;
       const response = await fetch(feed.url, {
         headers
-      })
+      });
       if (response.status === 304 || !response.ok) {
         continue;
       }
@@ -434,7 +408,7 @@ async function fetchFeeds(feedId) {
         data: xmlText
       });
 
-      if (parsedData.error) {
+      if (parsedData?.error) {
         console.error("Error parsing RSS:", parsedData.error);
         continue;
       }
@@ -451,129 +425,155 @@ async function fetchFeeds(feedId) {
         });
       }
     } catch (error) {
-      console.error('Error fetching feed:', error.message);
+      console.error('Error fetching feed:', error?.message || error);
     }
   }
-  chrome.storage.local.set({ feeds });
+  await chrome.storage.local.set({ feeds });
   await countUnreadItems();
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
-    if (message.type === 'getItems') {
-      try {
+    try {
+      if (message.type === 'getItems') {
         const items = await selectData(message.filters);
         sendResponse({ success: true, data: items });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
       }
-    }
-    else if (message.type === 'getLastItems') {
-      try {
+      else if (message.type === 'getLastItems') {
         const items = await getLatestItemsNotRead();
         sendResponse({ success: true, data: items });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
       }
-    }
-    else if (message.type === 'markItemsAsRead') {
-      try {
+      else if (message.type === 'markItemsAsRead') {
         const items = await updatePostsAsRead(message.ids);
         sendResponse({ success: true, data: items });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
       }
-    }
-    else if (message.type === 'markFeedAsRead') {
-      try {
+      else if (message.type === 'markFeedAsRead') {
         const items = await updateFeedAsRead(message.id);
         sendResponse({ success: true, data: items });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
       }
-    }
-    else if (message.type === 'markAllAsRead') {
-      try {
+      else if (message.type === 'markAllAsRead') {
         const items = await updateAllFeedAsRead();
         sendResponse({ success: true, data: items });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
       }
-    }
-    else if (message.type === 'getUnreadItemsCountByFeeds') {
-      try {
+      else if (message.type === 'getUnreadItemsCountByFeeds') {
         const data = await groupUnreadItemsByFeedId();
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'findRSSFeeds') {
-      try {
+      } else if (message.type === 'findRSSFeeds') {
         const data = await findRssFeed(message.url);
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'deleteItems') {
-      try {
+      } else if (message.type === 'deleteItems') {
         const data = await deleteItems(message.ids);
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'deleteAllItems') {
-      try {
+      } else if (message.type === 'deleteAllItems') {
         const data = await deleteItems();
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'deleteFeed') {
-      try {
+      } else if (message.type === 'deleteFeed') {
         const id = message.id;
-        const feeds = await chrome.storage.local.get({ feeds: [] });
-        await chrome.storage.local.set({ feeds: feeds.feeds.filter(feed => feed.id !== id) });
+        const stored = await chrome.storage.local.get({ feeds: [] });
+        const feeds = stored.feeds || [];
+        await chrome.storage.local.set({ feeds: feeds.filter(feed => feed.id !== id) });
         const data = await deleteFeedItems(id, true);
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'clearFeed') {
-      try {
+      } else if (message.type === 'clearFeed') {
         const data = await deleteFeedItems(message.id);
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-
-    } else if (message.type === 'updateItems') {
-      try {
+      } else if (message.type === 'updateItems') {
         const data = await updateItems(message.items);
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'fetchFeeds') {
-      try {
+      } else if (message.type === 'fetchFeeds') {
         await fetchFeeds(message.feedId);
         sendResponse({ success: true });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    } else if (message.type === 'countItems') {
-      try {
+      } else if (message.type === 'countItems') {
         const data = await countItems();
         sendResponse({ success: true, data });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
+      } else if (message.type === 'subscribe') {
+        await fetchFeeds();
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: 'Unknown message type' });
       }
+    } catch (err) {
+      sendResponse({ success: false, error: err?.message || String(err) });
     }
   })();
-  return true;
-})
+  return true; // keep message channel open for async sendResponse
+});
+
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    await chrome.alarms.clearAll();
+    await createOffscreenDocument();
+
+    if (navigator.onLine) {
+      await fetchFeeds();
+    }
+    await countUnreadItems();
+    await deleteOldItems();
+    await changeNotStartedToZero();
+
+    let { fetchFeedsIntervalMinutes } = await chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 });
+    fetchFeedsIntervalMinutes = Number(fetchFeedsIntervalMinutes);
+
+    chrome.alarms.create('fetch-feeds', { periodInMinutes: fetchFeedsIntervalMinutes });
+    chrome.alarms.create('delete-old-items', { periodInMinutes: 24 * 60 });
+  } catch (err) {
+    console.error('onInstalled error:', err);
+  }
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  try {
+    const all = await chrome.alarms.getAll();
+    const hasFetch = all.some(a => a.name === 'fetch-feeds');
+    const hasDeleteOld = all.some(a => a.name === 'delete-old-items');
+
+    const { fetchFeedsIntervalMinutes: minutes } = await chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 });
+    const fetchFeedsIntervalMinutes = Number(minutes);
+
+    if (!hasFetch) {
+      chrome.alarms.create('fetch-feeds', { periodInMinutes: fetchFeedsIntervalMinutes });
+    }
+    if (!hasDeleteOld) {
+      chrome.alarms.create('delete-old-items', { periodInMinutes: 24 * 60 });
+    }
+
+    await createOffscreenDocument();
+  } catch (err) {
+    console.error('onStartup error:', err);
+  }
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  try {
+    if (alarm.name === 'fetch-feeds') {
+      if (navigator.onLine) {
+        await fetchFeeds();
+      } else {
+        chrome.alarms.clear('check-online', () => {
+          chrome.alarms.create('check-online', { periodInMinutes: 3 });
+        });
+      }
+    } else if (alarm.name === 'check-online') {
+      if (navigator.onLine) {
+        await fetchFeeds();
+        chrome.alarms.clear('check-online');
+      }
+    } else if (alarm.name === 'delete-old-items') {
+      await deleteOldItems();
+    }
+  } catch (err) {
+    console.error('alarms.onAlarm error:', err);
+  }
+});
+
+chrome.storage.onChanged.addListener(async (changes) => {
+  if (changes.fetchFeedsIntervalMinutes) {
+    const newInterval = Number(changes.fetchFeedsIntervalMinutes.newValue);
+    chrome.alarms.clear('fetch-feeds', () => {
+      chrome.alarms.create('fetch-feeds', { periodInMinutes: newInterval });
+    });
+  }
+});
 
 self.onerror = e => console.error("SW ERROR:", e);
 self.onunhandledrejection = e => console.error("SW PROMISE ERROR:", e.reason);
-
-
-

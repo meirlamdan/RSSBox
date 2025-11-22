@@ -115,7 +115,7 @@ async function openListPage(id) {
     await chrome.storage.local.set({ selectedItem: { id } });
   }
   const url = chrome.runtime.getURL('list/list.html');
-  const tabs = await chrome.tabs.query({ url });
+  const tabs = await chrome.tabs.query({ url: [url] });
   if (tabs.length) {
     await chrome.tabs.reload(tabs[0].id);
     chrome.tabs.update(tabs[0].id, { active: true });
