@@ -27,8 +27,8 @@ const HeaderFeed = (data) => {
     <div class="feed-meta">
      <span>items: <b>${() => data.count}</b></span> 
      <span>unread: <b>${() => Object.values(data.groupUnreadItemsByFeedId).reduce((a, b) => a + b, 0)}</b></span>
-     <span>last update: <b>${() => formatDate(data.feeds.map(f => new Date(f.lastItemDate).getTime()).sort((a, b) => b - a)[0])}</b></span>
-     <span>last check: <b>${() => formatDate(data.feeds.map(f => new Date(f.lastChecked).getTime()).sort((a, b) => b - a)[0])}</b></span>
+     <span>last update: <b>${() => formatDate(data.feeds.filter(f => f.lastItemDate).map(f => new Date(f.lastItemDate).getTime()).sort((a, b) => b - a)[0])}</b></span>
+     <span>last check: <b>${() => formatDate(data.feeds.filter(f => f.lastChecked).map(f => new Date(f.lastChecked).getTime()).sort((a, b) => b - a)[0])}</b></span>
     </div>
     <div class="filters">
        <div class="filter"><input id="unreadOnly" type="checkbox" checked="${() => data.unreadOnly}" name="unreadOnly" @change="${() => data.unreadOnly = !data.unreadOnly}"> <label for="unreadOnly" >unread only</label> </div>

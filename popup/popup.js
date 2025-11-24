@@ -60,7 +60,7 @@ function handleFeedSelection(e, feed) {
 async function saveFeeds() {
   const feeds = data.feeds.map(feed => ({ url: feed.url, title: feed.title, id: crypto.randomUUID(), createdAt: Date.now(), alt: feed.alt || '' }));
   const { feeds: existingFeeds } = await chrome.storage.local.get({ feeds: [] });
-  if (existingFeeds.map(feed => feed.url).includes(feeds.map(feed => feed.url)[0])) {
+  if (existingFeeds.map(feed => feed.url).some(url => feeds.some(f => f.url === url))) {
     showToast('Feed already exists', 'error');
     return;
   }
