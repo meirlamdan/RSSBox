@@ -523,6 +523,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.runtime.onStartup.addListener(async () => {
   try {
+    await countUnreadItems();
     const all = await chrome.alarms.getAll();
     const hasFetch = all.some(a => a.name === 'fetch-feeds');
     const hasDeleteOld = all.some(a => a.name === 'delete-old-items');

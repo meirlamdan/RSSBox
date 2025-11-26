@@ -40,7 +40,7 @@ function displayResults() {
   const t = html`<div class="feeds">
    ${feeds.map(feed => html`<div class="feed">
     <div class="title">
-    <input type="text" name="title" value="${() => feed.alt || feed.title}" @input="${(e) => feed.alt = e.target.value}">
+    <input type="text" name="title" value="${() => feed.alt || feed.title || new URL(feed.url).hostname}" @input="${(e) => feed.alt = e.target.value}">
     <div class="url">${feed.url}</div>
     </div>
     <input type="checkbox" name="feed"  @change="${(e) => handleFeedSelection(e, feed)}">
@@ -91,7 +91,7 @@ async function displayLatestUpdates() {
                  <div @click="${() => markAsRead(item.id)}" title="Mark as Read">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE --><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0"/><path d="m9 12l2 2l4-4"/></g></svg>               
                  </div>
-                 <a href="${item.link}" target="_blank" title="Open Original Item">
+                 <a href="${item.link}" @click="${() => markAsRead(item.id)}" target="_blank" title="Open Original Item">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE --><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 15l6-6m-4-3l.463-.536a5 5 0 0 1 7.071 7.072L18 13m-5 5l-.397.534a5.07 5.07 0 0 1-7.127 0a4.97 4.97 0 0 1 0-7.071L6 11"/></svg>
                  </a>
                  <div @click="${() => deleteItem(item.id)}" title="Delete">
