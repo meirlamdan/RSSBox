@@ -117,11 +117,13 @@ async function openListPage(id) {
   const url = chrome.runtime.getURL('list/list.html');
   const tabs = await chrome.tabs.query({ url: [url] });
   if (tabs.length) {
-    await chrome.tabs.reload(tabs[0].id);
-    chrome.tabs.update(tabs[0].id, { active: true });
+    const tab = tabs[0];
+    await chrome.tabs.reload(tab.id);
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
     return;
   }
-  chrome.tabs.create({ url });
+  await chrome.tabs.create({ url });
 }
 
 function deleteItem(id) {
