@@ -1,0 +1,181 @@
+/* Theme Variables for RSSBox Extension */
+
+/* Light theme (default) */
+:root {
+  /* Backgrounds */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --card-bg: var(--bg-secondary);
+  --hover-bg: #f8f8f8;
+  --active-bg: #eaf3ff;
+
+  /* Text colors */
+  --text-primary: #333;
+  --text-secondary: #666;
+  --text-muted: #888;
+  --text-feed: #5a6b7a;
+
+  /* Borders */
+  --border-color: #e0e0e0;
+  --border-light: #f1f1f1;
+  --border-input: #ccc;
+
+  /* Accent colors */
+  --accent-color: #007bff;
+  --accent-hover: #0056b3;
+  --success-color: #28a745;
+  --success-hover: #1e7e34;
+  --error-color: #c62828;
+  --link-color: #0066cc;
+  --link-item-title: var(--accent-color);
+
+  /* Badges */
+  --badge-unread: #2563eb;
+  --badge-bg: #f0f0f0;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 3px 8px rgba(0, 0, 0, 0.08);
+  --shadow-menu: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-item: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-item-hover: 0 3px 8px rgba(0, 0, 0, 0.08);
+  --shadow-image: 0 1px 6px rgba(0, 0, 0, 0.1);
+  --shadow-dragging: 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-badge: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-toast: 0 4px 10px rgba(0, 0, 0, 0.05);
+
+  /* Scrollbar */
+  --scrollbar-track: #f8f9fa;
+  --scrollbar-thumb: #ccc;
+
+  /* Code blocks and quotes */
+  --code-bg: #f5f5f5;
+  --blockquote-bg: #f7f7f7;
+  --blockquote-border: #0077cc;
+  --blockquote-text: #444;
+
+  /* Special backgrounds */
+  --unread-item-bg: #f0f9ff;
+  --toast-success-bg: #f1f8f5;
+  --toast-success-border: #81c784;
+  --toast-success-icon: #388e3c;
+  --toast-error-bg: #fdf5f5;
+  --toast-error-border: #e57373;
+  --toast-error-icon: #c62828;
+  --find-feeds-hover: #f6f8ff;
+  --find-feeds-border: #cbd6ff;
+
+  /* Content colors */
+  --content-text: #555;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --card-bg: var(--bg-secondary);
+  --hover-bg: #3a3a3a;
+  --active-bg: #1e3a5f;
+
+  /* Text colors */
+  --text-primary: #e4e4e4;
+  --text-secondary: #b0b0b0;
+  --text-muted: #888;
+  --text-feed: #a0b0c0;
+
+  /* Borders */
+  --border-color: #404040;
+  --border-light: #353535;
+  --border-input: #555;
+
+  /* Accent colors */
+  --accent-color: #4a9eff;
+  --accent-hover: #6db0ff;
+  --success-color: #4caf50;
+  --success-hover: #66bb6a;
+  --error-color: #ef5350;
+  --link-color: #5ca9ff;
+  --link-item-title: var(--accent-color);
+
+  /* Badges */
+  --badge-unread: #4a9eff;
+  --badge-bg: #3a3a3a;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 3px 8px rgba(0, 0, 0, 0.5);
+  --shadow-menu: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-item: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-item-hover: 0 3px 8px rgba(0, 0, 0, 0.5);
+  --shadow-image: 0 1px 6px rgba(0, 0, 0, 0.4);
+  --shadow-dragging: 0 4px 8px rgba(0, 0, 0, 0.6);
+  --shadow-badge: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-toast: 0 4px 10px rgba(0, 0, 0, 0.3);
+
+  /* Scrollbar */
+  --scrollbar-track: #2d2d2d;
+  --scrollbar-thumb: #555;
+
+  /* Code blocks and quotes */
+  --code-bg: #1e1e1e;
+  --blockquote-bg: #2a2a2a;
+  --blockquote-border: #4a9eff;
+  --blockquote-text: #c0c0c0;
+
+  /* Special backgrounds */
+  --unread-item-bg: #1a2a3a;
+  --toast-success-bg: #1a2e1f;
+  --toast-success-border: #4caf50;
+  --toast-success-icon: #66bb6a;
+  --toast-error-bg: #3a1f1f;
+  --toast-error-border: #ef5350;
+  --toast-error-icon: #ef5350;
+  --find-feeds-hover: #1e2a3a;
+  --find-feeds-border: #3a4a6a;
+
+  /* Content colors */
+  --content-text: #c0c0c0;
+}
+
+/* Smooth transitions for theme changes */
+body,
+.item,
+.feed-item,
+.card,
+button,
+input,
+select,
+.header,
+.feeds,
+.feeds-wrapper,
+.items-wrapper,
+.feed-menu,
+.toast {
+  transition: background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Handle images in dark mode */
+[data-theme="dark"] img {
+  opacity: 0.9;
+}
+
+/* Keep content images and favicons at full brightness */
+[data-theme="dark"] .item img,
+[data-theme="dark"] .media img,
+[data-theme="dark"] .feed img {
+  opacity: 1;
+}

@@ -1,4 +1,4 @@
-import { html, reactive } from '../arrow.mjs'
+import { html, r, reactive } from '../arrow.mjs'
 import { showToast } from "../toast.js";
 import Items from '../components/Items.js';
 import Svg from '../components/Svg.js';
@@ -146,12 +146,12 @@ async function clearFeed(id) {
 
 async function editFeed(id) {
   const feed = data.feeds.find(f => f.id === id);
-  const promptResult = prompt('Enter a new title for the feed:', feed.alt || feed.title);
+  const promptResult = prompt('Enter a new name for the feed:', feed.alt || feed.title);
   if (promptResult) {
     const updatedFeeds = data.feeds.map(f => f.id === feed.id ? { ...f, alt: promptResult } : f);
     await chrome.storage.local.set({ feeds: updatedFeeds });
     data.feeds = updatedFeeds;
-    showToast('Feed title updated successfully', 'success');
+    showToast('Feed name updated successfully', 'success');
   }
 }
 
@@ -227,19 +227,46 @@ async function displayItems(id) {
     if (!batch.includes(itemId)) {
       batch.push(itemId);
     }
-    clearTimeout(timeout);
-    timeout = setTimeout(sendBatch, 500);
+    if (timeout) return;
+    timeout = setTimeout(sendBatch, 300);
   }
 
   function sendBatch() {
-    chrome.runtime.sendMessage({ type: 'markItemsAsRead', ids: batch });
-    batch.forEach(id => {
-      const feedId = data.items.find(i => i.id === id).feedId;
-      if (data.groupUnreadItemsByFeedId[feedId]) {
-        data.groupUnreadItemsByFeedId[feedId] -= 1;
-      }
-    })
+    timeout = null;
+    if (batch.length === 0) return;
+
+    const batchToSend = [...batch];
     batch = [];
+
+    chrome.runtime.sendMessage(
+      { type: 'markItemsAsRead', ids: batchToSend },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to mark items as read:', chrome.runtime.lastError);
+          batch.push(...batchToSend);
+          return;
+        }
+
+        if (response && response.success) {
+          batchToSend.forEach(id => {
+            const item = data.items.find(i => i.id === id);
+            if (!item) return;
+
+            const feedId = item.feedId;
+            if (data.groupUnreadItemsByFeedId[feedId] &&
+                data.groupUnreadItemsByFeedId[feedId] > 0) {
+              data.groupUnreadItemsByFeedId[feedId] -= 1;
+            }
+          });
+
+          if (batchToSend.length > 10) {
+            updateDataState();
+          }
+        } else {
+          batch.push(...batchToSend);
+        }
+      }
+    );
   }
   const observer = new IntersectionObserver((entries, obs) => {
     entries.forEach(entry => {
@@ -279,6 +306,15 @@ async function displayItems(id) {
       }
     });
   }
+
+  window.addEventListener('beforeunload', () => {
+    if (batch.length > 0) {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      chrome.runtime.sendMessage({ type: 'markItemsAsRead', ids: batch });
+    }
+  });
 }
 
 document.querySelector('.all-items-btn').addEventListener('click', () => {
@@ -315,5 +351,6 @@ document.querySelector('.options').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
-
-
+document.querySelectorAll("pre code").forEach(el => {
+  el.textContent = el.textContent.trim();
+});

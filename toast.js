@@ -46,12 +46,12 @@ style.textContent = `
   max-width: 300px;
   padding: 12px 16px;
   border-radius: 12px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-toast);
   opacity: 0;
   transform: translateX(100%);
   transition: all 0.4s ease;
@@ -61,12 +61,12 @@ style.textContent = `
   transform: translateX(0);
 }
 .toast.success {
-  border-left: 5px solid #81c784;
-  background: #f1f8f5;
+  border-left: 5px solid var(--toast-success-border);
+  background: var(--toast-success-bg);
 }
 .toast.error {
-  border-left: 5px solid #e57373;
-  background: #fdf5f5;
+  border-left: 5px solid var(--toast-error-border);
+  background: var(--toast-error-bg);
 }
 .toast .icon {
   font-size: 16px;
@@ -74,10 +74,10 @@ style.textContent = `
   color: inherit;
 }
 .toast.success .icon {
-  color: #388e3c;
+  color: var(--toast-success-icon);
 }
 .toast.error .icon {
-  color: #c62828;
+  color: var(--toast-error-icon);
 }
 .toast .message {
   flex: 1;

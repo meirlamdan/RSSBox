@@ -14,16 +14,16 @@
 body {
   font-family: Arial, sans-serif;
   margin: 0;
-  background: #f8f9fa;
-  color: #333;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   padding: 10px;
 }
 
 .feeds-container {
   margin-top: 10px;
-  background: white;
+  background: var(--card-bg);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 
   .feed {
@@ -32,7 +32,7 @@ body {
     align-items: center;
     gap: 16px;
     padding: 10px 12px;
-    border-bottom: 1px solid #f1f1f1;
+    border-bottom: 1px solid var(--border-light);
     font-size: 13px;
 
     .title {
@@ -42,10 +42,12 @@ body {
 
     input {
       padding: 5px 8px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-input);
       border-radius: 4px;
       margin-bottom: 5px;
       width: 100%;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
     }
   }
 
@@ -60,7 +62,7 @@ body {
 .save-feeds-button {
   margin: 10px;
   padding: 9px 14px;
-  background-color: #28a745;
+  background-color: var(--success-color);
   color: #fff;
   border: none;
   font-size: 13px;
@@ -71,11 +73,11 @@ body {
 }
 
 .save-feeds-button:hover:not(:disabled) {
-  background-color: #1e7e34;
+  background-color: var(--success-hover);
 }
 
 .save-feeds-button:disabled {
-  background: #ccc;
+  background: var(--border-input);
   cursor: not-allowed;
 }
 
@@ -87,22 +89,22 @@ body {
 
   .item {
     position: relative;
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     padding: 10px 12px;
-    border: 1px solid #eee;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-item);
     transition: box-shadow 0.2s ease;
 
     &:hover {
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-lg);
     }
 
     .date-and-actions {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      color: #888;
+      color: var(--text-muted);
       margin-bottom: 8px;
 
       .actions {
@@ -113,11 +115,12 @@ body {
         a {
           color: inherit;
         }
+
         svg {
           cursor: pointer;
 
           &:hover {
-            color: #007bff;
+            color: var(--accent-color);
           }
         }
       }
@@ -129,7 +132,7 @@ body {
 
     .feed {
       font-size: 12px;
-      color: #5a6b7a;
+      color: var(--text-feed);
       margin-bottom: 4px;
       display: flex;
       gap: 4px;
@@ -138,7 +141,7 @@ body {
     .title {
       font-size: 13px;
       font-weight: 600;
-      color: #007bff;
+      color: var(--link-item-title);
       line-height: 1.3;
       overflow: hidden;
       line-clamp: 2;
@@ -153,11 +156,11 @@ body {
 
 .find-feeds {
   padding: 6px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -167,9 +170,9 @@ body {
 
   &:hover,
   &.active {
-    background: #f6f8ff;
-    border-color: #cbd6ff;
-    color: #0b62ff;
+    background: var(--find-feeds-hover);
+    border-color: var(--find-feeds-border);
+    color: var(--accent-light);
   }
 
   svg {
@@ -184,19 +187,19 @@ body {
 .view-all-feeds {
   margin-top: 12px;
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   text-align: center;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  color: #333;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
 
   &:hover {
-    background: #f6f8ff;
-    border-color: #cbd6ff;
-    color: #0b62ff;
+    background: var(--find-feeds-hover);
+    border-color: var(--find-feeds-border);
+    color: var(--accent-light);
   }
 }
