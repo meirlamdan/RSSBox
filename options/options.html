@@ -35,6 +35,20 @@
     <input type="number" id="fetchFeeds" min="10">
     <label for="fetchFeeds">minutes</label>
   </div>
+
+  <div class="import-export">
+    <h3>Import / Export</h3>
+    <div class="export-buttons">
+      <button id="exportOpml">Export OPML</button>
+      <button id="exportJson">Export JSON</button>
+    </div>
+    <div class="import-section">
+      <button id="importButton">Import from file</button>
+      <input type="file" id="importFile" accept=".opml,.xml,.json" hidden>
+      <span class="hint">Supports OPML and JSON</span>
+    </div>
+  </div>
+
   <script type="module" src="options.js"></script>
 </body>
 
