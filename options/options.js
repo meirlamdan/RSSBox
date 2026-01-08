@@ -1,6 +1,7 @@
 // Theme management
 import { getTheme, setTheme } from '../shared/theme.js';
 import { showToast } from '../toast.js';
+import { DEFAULT_GLOBAL_NOTIFICATIONS } from '../notifications.js';
 
 const themeSelect = document.querySelector('#themeSelect');
 const savedTheme = await getTheme();
@@ -23,6 +24,81 @@ fetchFeedsInput.value = (await chrome.storage.local.get({ fetchFeedsIntervalMinu
 fetchFeedsInput.addEventListener('change', async () => {
   await chrome.storage.local.set({ fetchFeedsIntervalMinutes: fetchFeedsInput.value });
 })
+
+// Notification settings
+const globalNotificationsEnabled = document.querySelector('#globalNotificationsEnabled');
+const maxNotificationsInput = document.querySelector('#maxNotifications');
+const groupNotificationsCheckbox = document.querySelector('#groupNotifications');
+const quietHoursEnabled = document.querySelector('#quietHoursEnabled');
+const quietHoursStart = document.querySelector('#quietHoursStart');
+const quietHoursEnd = document.querySelector('#quietHoursEnd');
+const testNotificationButton = document.querySelector('#testNotification');
+const testNotificationStatus = document.querySelector('#testNotificationStatus');
+
+// Load notification settings
+const { globalNotifications } = await chrome.storage.local.get({ 
+  globalNotifications: DEFAULT_GLOBAL_NOTIFICATIONS 
+});
+
+globalNotificationsEnabled.checked = globalNotifications.enabled;
+maxNotificationsInput.value = globalNotifications.maxPerBatch;
+groupNotificationsCheckbox.checked = globalNotifications.grouping;
+quietHoursEnabled.checked = globalNotifications.quietHours.enabled;
+quietHoursStart.value = globalNotifications.quietHours.start;
+quietHoursEnd.value = globalNotifications.quietHours.end;
+
+// Update notification settings when changed
+async function updateNotificationSettings() {
+  const settings = {
+    enabled: globalNotificationsEnabled.checked,
+    maxPerBatch: parseInt(maxNotificationsInput.value) || 5,
+    grouping: groupNotificationsCheckbox.checked,
+    quietHours: {
+      enabled: quietHoursEnabled.checked,
+      start: quietHoursStart.value,
+      end: quietHoursEnd.value
+    }
+  };
+  
+  await chrome.storage.local.set({ globalNotifications: settings });
+}
+
+globalNotificationsEnabled.addEventListener('change', updateNotificationSettings);
+maxNotificationsInput.addEventListener('change', updateNotificationSettings);
+groupNotificationsCheckbox.addEventListener('change', updateNotificationSettings);
+quietHoursEnabled.addEventListener('change', updateNotificationSettings);
+quietHoursStart.addEventListener('change', updateNotificationSettings);
+quietHoursEnd.addEventListener('change', updateNotificationSettings);
+
+// Test notification button
+testNotificationButton.addEventListener('click', async () => {
+  testNotificationButton.disabled = true;
+  testNotificationStatus.textContent = 'Sending test notification...';
+  testNotificationStatus.className = 'status';
+  
+  try {
+    const response = await chrome.runtime.sendMessage({ 
+      type: 'testNotification' 
+    });
+    
+    if (response && response.success) {
+      testNotificationStatus.textContent = 'Test notification sent!';
+      testNotificationStatus.className = 'status success';
+    } else {
+      testNotificationStatus.textContent = 'Failed to send notification';
+      testNotificationStatus.className = 'status error';
+    }
+  } catch (error) {
+    testNotificationStatus.textContent = 'Error: ' + (error.message || 'Unknown error');
+    testNotificationStatus.className = 'status error';
+  } finally {
+    testNotificationButton.disabled = false;
+    setTimeout(() => {
+      testNotificationStatus.textContent = '';
+      testNotificationStatus.className = 'status';
+    }, 3000);
+  }
+});
 
 // Version and update check
 const version = document.querySelector('#version');

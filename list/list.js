@@ -20,7 +20,8 @@ const data = reactive({
   showAllItems: false,
   count: 0,
   unreadOnly: true,
-  starredOnly: false
+  starredOnly: false,
+  scrollToItemId: null
 })
 
 data.$on('feedId', (feedId) => {
@@ -61,7 +62,23 @@ data.$on('starredOnly', (starredOnly) => {
 const { data: groupUnreadItemsByFeedId } = await chrome.runtime.sendMessage({ type: 'getUnreadItemsCountByFeeds' });
 data.groupUnreadItemsByFeedId = groupUnreadItemsByFeedId;
 const { feeds: allFeeds, selectedItem, showAllItems } = await chrome.storage.local.get({ feeds: [], selectedItem: null, showAllItems: false });
-if (selectedItem) {
+
+// Check URL params for notification navigation
+const urlParams = new URLSearchParams(window.location.search);
+const urlFeedId = urlParams.get('feedId');
+const urlItemId = urlParams.get('itemId');
+
+if (urlFeedId) {
+  // Navigate to specific feed from notification click
+  data.feeds = allFeeds;
+  data.feedId = urlFeedId;
+  // Clean up URL params without reload
+  window.history.replaceState({}, '', window.location.pathname);
+  if (urlItemId) {
+    // Store itemId to scroll to after items load
+    data.scrollToItemId = urlItemId;
+  }
+} else if (selectedItem) {
   const { id } = selectedItem;
   displayItems(id);
 }
@@ -87,6 +104,8 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     if (data.feedId || (data.showAllItems && !data.lastItemDate)) {
       displayItems();
     }
+  } else if (msg.type === "focusFeed") {
+    data.feedId = msg.feedId;
   }
 });
 
@@ -100,6 +119,14 @@ Items(data);
 html`${() => data.openMenuFeedId && html`<div class="feed-menu" style=" bottom: ${document.body.clientHeight - data.rect.y - data.rect.height + 50}px;">
         <button @click="${() => editFeed(data.openMenuFeedId)}">${Svg('edit')} <span>Edit Feed Name</span></button>
         <button @click="${() => refresh(data.openMenuFeedId)}">${Svg('refresh')} <span>Check for new items</span></button>
+        <button @click="${() => toggleFeedNotifications(data.openMenuFeedId)}">
+          ${() => {
+            const feed = data.feeds.find(f => f.id === data.openMenuFeedId);
+            return feed?.notifications?.enabled ? 
+              html`${Svg('notification-off')} <span>Disable Notifications</span>` : 
+              html`${Svg('notification')} <span>Enable Notifications</span>`;
+          }}
+        </button>
         <button @click="${() => clearFeed(data.openMenuFeedId)}">${Svg('delete')} <span>Delete Feed Items</span></button>
          ${() => data.groupUnreadItemsByFeedId[data.openMenuFeedId] ? html`<button @click = "${() => markFeedAsRead(data.openMenuFeedId)}" >${Svg('read')} <span>Mark as Read</span></button>` : ''} 
         <button @click="${() => deleteFeed(data.openMenuFeedId)}">${Svg('remove')} <span>Delete Feed</span></button>
@@ -184,6 +211,32 @@ async function markFeedAsRead(id) {
   } else {
     showToast(error || 'Error marking feed as read', 'error');
   }
+}
+
+async function toggleFeedNotifications(id) {
+  const feed = data.feeds.find(f => f.id === id);
+  if (!feed) return;
+  
+  const newNotificationState = !feed.notifications?.enabled;
+  const updatedFeeds = data.feeds.map(f => 
+    f.id === id ? { 
+      ...f, 
+      notifications: { 
+        ...(f.notifications || { priority: 'normal' }), 
+        enabled: newNotificationState 
+      } 
+    } : f
+  );
+  
+  await chrome.storage.local.set({ feeds: updatedFeeds });
+  data.feeds = updatedFeeds;
+  
+  showToast(
+    `Notifications ${newNotificationState ? 'enabled' : 'disabled'} for feed`,
+    'success'
+  );
+  
+  data.openMenuFeedId = null;
 }
 
 async function displayItems(id) {
@@ -288,6 +341,16 @@ async function displayItems(id) {
         observer.observe(item);
       }
     });
+    // Scroll to specific item if requested (from notification click)
+    if (data.scrollToItemId) {
+      const targetItem = document.querySelector(`.item[data-id="${data.scrollToItemId}"]`);
+      if (targetItem) {
+        targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetItem.classList.add('highlight');
+        setTimeout(() => targetItem.classList.remove('highlight'), 2000);
+      }
+      data.scrollToItemId = null;
+    }
   }, 500);
 
   if (!data.feedId && data.items && data.lastItemDate) {

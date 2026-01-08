@@ -1,4 +1,5 @@
 import { findRssFeed } from './find-feed/index.js';
+import { initializeNotificationSettings, createFeedNotification, createTestNotification, DEFAULT_GLOBAL_NOTIFICATIONS } from './notifications.js';
 
 async function createOffscreenDocument() {
   try {
@@ -383,10 +384,12 @@ const updateItems = async (items) => {
 }
 
 async function fetchFeeds(feedId) {
-  const { feeds } = await chrome.storage.local.get({ feeds: [] });
+  const { feeds, globalNotifications } = await chrome.storage.local.get({
+    feeds: [],
+    globalNotifications: DEFAULT_GLOBAL_NOTIFICATIONS
+  });
   let isNewItems = false;
   for (const feed of feeds) {
-    if (feedId && feed.id !== feedId) continue;
     feed.lastChecked = Date.now();
     try {
       const headers = {};
@@ -417,16 +420,19 @@ async function fetchFeeds(feedId) {
         await insertData(items, feed.id)
         feed.lastItemDate = items.map(item => item.pubDate).sort((a, b) => new Date(b) - new Date(a))[0];
         isNewItems = true;
-      }
-      if (isNewItems) {
-        chrome.runtime.sendMessage({
-          type: "newItems",
-          data: feeds
-        });
+        if (globalNotifications.enabled && feed.notifications?.enabled) {
+          await createFeedNotification(feed, items, globalNotifications);
+        }
       }
     } catch (error) {
       console.error('Error fetching feed:', error?.message || error);
     }
+  }
+  if (isNewItems) {
+    chrome.runtime.sendMessage({
+      type: "newItems",
+      data: feeds
+    });
   }
   await chrome.storage.local.set({ feeds });
   await countUnreadItems();
@@ -489,6 +495,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } else if (message.type === 'subscribe') {
         await fetchFeeds();
         sendResponse({ success: true });
+      } else if (message.type === 'testNotification') {
+        const success = await createTestNotification();
+        sendResponse({ success });
       } else {
         sendResponse({ success: false, error: 'Unknown message type' });
       }
@@ -503,6 +512,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   try {
     await chrome.alarms.clearAll();
     await createOffscreenDocument();
+    await initializeNotificationSettings();
 
     if (navigator.onLine) {
       await fetchFeeds();
@@ -539,6 +549,7 @@ chrome.runtime.onStartup.addListener(async () => {
     }
 
     await createOffscreenDocument();
+    await initializeNotificationSettings();
   } catch (err) {
     console.error('onStartup error:', err);
   }
@@ -574,6 +585,54 @@ chrome.storage.onChanged.addListener(async (changes) => {
       chrome.alarms.create('fetch-feeds', { periodInMinutes: newInterval });
     });
   }
+});
+
+// Handle notification clicks
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+  async function openListPage(feedId, itemId) {
+    let url = chrome.runtime.getURL('list/list.html');
+    // Add query params for feedId and itemId
+    const params = new URLSearchParams();
+    if (feedId) params.set('feedId', feedId);
+    if (itemId && itemId !== 'none') params.set('itemId', itemId);
+    const queryString = params.toString();
+    if (queryString) url += '?' + queryString;
+
+    const baseUrl = chrome.runtime.getURL('list/list.html');
+    const tabs = await chrome.tabs.query({ url: baseUrl + '*' });
+    if (tabs.length) {
+      const tab = tabs[0];
+      await chrome.tabs.update(tab.id, { url, active: true });
+      await chrome.windows.update(tab.windowId, { focused: true });
+      return;
+    }
+    await chrome.tabs.create({ url });
+  }
+
+  try {
+    // notificationId format: feed::{feedId}::item::{itemId}::{timestamp}
+    let feedId = null;
+    let itemId = null;
+
+    if (notificationId.startsWith('feed::')) {
+      const parts = notificationId.split('::');
+      // parts = ['feed', feedId, 'item', itemId, timestamp]
+      if (parts.length >= 4) {
+        feedId = parts[1];
+        itemId = parts[3];
+      }
+    }
+
+    await openListPage(feedId, itemId);
+    chrome.notifications.clear(notificationId);
+
+  } catch (error) {
+    console.error('Error handling notification click:', error);
+  }
+});
+
+chrome.notifications.onClosed.addListener(async (notificationId) => {
+  await chrome.storage.local.remove(notificationId);
 });
 
 self.onerror = e => console.error("SW ERROR:", e);

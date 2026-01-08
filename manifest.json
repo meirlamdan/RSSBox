@@ -8,7 +8,8 @@
     "activeTab",
     "scripting",
     "alarms",
-    "offscreen"
+    "offscreen",
+    "notifications"
   ],
   "host_permissions": [
     "https://*/",
