@@ -35,28 +35,6 @@ const openDB = async () => {
   });
 };
 
-// only for migration from previous version
-async function changeNotStartedToZero() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("items", "readwrite");
-    const store = tx.objectStore("items");
-    const cursorRequest = store.openCursor();
-    cursorRequest.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor && cursor.value.isStarred !== 0 && cursor.value.isStarred !== 2) {
-        const item = cursor.value;
-        item.isStarred = 0;
-        store.put(item);
-        cursor.continue();
-      } else {
-        resolve(true);
-      }
-    };
-    cursorRequest.onerror = () => reject(cursorRequest.error);
-  });
-}
-
 /* -----------------------
    Data operations
    ----------------------- */
@@ -519,7 +497,6 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
     await countUnreadItems();
     await deleteOldItems();
-    await changeNotStartedToZero();
 
     let { fetchFeedsIntervalMinutes } = await chrome.storage.local.get({ fetchFeedsIntervalMinutes: 45 });
     fetchFeedsIntervalMinutes = Number(fetchFeedsIntervalMinutes);
