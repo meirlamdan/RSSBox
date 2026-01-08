@@ -16,7 +16,7 @@ export const DEFAULT_GLOBAL_NOTIFICATIONS = {
 };
 
 export const DEFAULT_FEED_NOTIFICATIONS = {
-  enabled: true,
+  enabled: false,
   priority: 'normal'
 };
 
